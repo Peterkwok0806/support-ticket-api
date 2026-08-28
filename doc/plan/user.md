@@ -57,7 +57,7 @@ src/main/resources/db/migration/
 
 ---
 
-## Task 2: DTO 類別建立
+## Task 2: DTO 類別建立- - 已完成實作
 
 ### 描述
 建立所有 Request/Response DTO 類別，包含 Bean Validation 驗證規則。
@@ -87,12 +87,12 @@ src/main/java/com/pk/support_ticket_api/users/
 - `Role` enum - 已存在
 
 ### Acceptance criteria
-- [ ] `CreateUserRequest` 包含 email、password、displayName、role 欄位
-- [ ] `UpdateUserRequest` 包含 email、displayName、role 欄位（皆可選）
-- [ ] `UserResponse` 包含 id、email、displayName、role、**status**、createdAt、updatedAt（不含密碼）
-- [ ] 所有必填欄位有正確的 Bean Validation 註解
-- [ ] email 格式驗證使用 `@Email`
-- [ ] 密碼複雜度驗證（大小寫+數字）
+- [x]`CreateUserRequest` 包含 email、password、displayName、role 欄位
+- [x]`UpdateUserRequest` 包含 email、displayName、role 欄位（皆可選）
+- [x]`UserResponse` 包含 id、email、displayName、role、**status**、createdAt、updatedAt（不含密碼）
+- [x]所有必填欄位有正確的 Bean Validation 註解
+- [x]email 格式驗證使用 `@Email`
+- [x]密碼複雜度驗證（大小寫+數字）
 
 ### 風險與待確認
 1. **密碼複雜度**：只需要大小寫字母及數字（`(?=.*[a-z])(?=.*[A-Z])(?=.*\d)`），不需特殊字元
