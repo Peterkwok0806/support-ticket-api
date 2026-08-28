@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i '44s/active/status/' user.md)",
+      "Bash(sed -i '45s/active.*而非.*/status Enum（UserStatus：ACTIVE\\\\/INACTIVE\\\\/SUSPENDED）/' user.md)",
+      "Bash(sed -i '48s/active/status/' user.md)",
+      "Bash(sed -i '49s/active BOOLEAN/status VARCHAR/' user.md)"
+    ]
+  }
+}

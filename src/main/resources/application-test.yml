@@ -1,0 +1,32 @@
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+  cache:
+    type: none
+
+  mail:
+    host: localhost
+    port: 1025
+
+logging:
+  level:
+    root: WARN
+    com.yourname.supportticket: INFO
+
+app:
+  jwt:
+    issuer: support-ticket-api-test
+    secret: test-only-secret-must-be-long-enough-for-jwt-signing
+    access-token-expiration: PT30M
+
+  notification:
+    email-enabled: false
+
+  attachment:
+    local-storage-path: ${java.io.tmpdir}/support-ticket-test-attachments

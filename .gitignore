@@ -1,0 +1,90 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.metadata/
+bin/
+/bin/
+/tmp/
+*.orig
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# =============================================
+# 敏感資訊與環境設定
+# =============================================
+.env
+.env.*
+!.env.example
+*.local
+application-local*.properties
+application-local*.yml
+
+# 憑證與密鑰檔案
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# =============================================
+# 日誌與暫存
+# =============================================
+*.log
+logs/
+
+# =============================================
+# 測試產出
+# =============================================
+test-output/
+surefire-reports/
+failsafe-reports/
+
+# =============================================
+# 編譯產物
+# =============================================
+*.class
+*.jar
+*.war
+*.ear
+
+# =============================================
+# 系統暫存
+# =============================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# =============================================
+# Git 核心
+# =============================================
+!.gitignore

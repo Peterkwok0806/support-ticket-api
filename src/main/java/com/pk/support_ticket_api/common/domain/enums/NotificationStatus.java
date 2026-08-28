@@ -1,0 +1,7 @@
+package com.pk.support_ticket_api.common.domain.enums;
+
+public enum NotificationStatus {
+    PENDING,
+    SENT,
+    FAILED
+}
