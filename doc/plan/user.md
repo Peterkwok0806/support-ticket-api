@@ -110,12 +110,11 @@ src/main/java/com/pk/support_ticket_api/users/
 - 建立 `UserServiceImpl` 實作類
 - 實作 CRUD 商業邏輯
 - 實作停用/啟用/刪除商業規則
-- **實作 Audit Log 記錄**（建立、更新、停用、啟用、刪除操作）
 
 ### Out of scope
 - Controller 層
 - 測試程式碼
-- AuditLog Entity 或 Repository（假設已由 audit 模組提供）
+- Audit Log 記錄功能（由 audit 模組獨立實作）
 
 ### Expected files
 ```
@@ -132,23 +131,20 @@ src/main/java/com/pk/support_ticket_api/users/
 - `ConflictException` - 已存在
 - `BusinessRuleException` - 已存在
 - `PageResponse` - 已存在
-- **AuditLogRepository 或 AuditLogService** - **需建立**（audit_logs 表存在於 V1，但無對應 Service）
 
 ### Acceptance criteria
-- [ ] `createUser()` - 建立新使用者，密碼 BCrypt 雜湊，檢查 email 唯一性，**記錄 Audit Log**
-- [ ] `updateUser()` - 更新使用者資料，檢查 email 唯一性（排除自己），**記錄 Audit Log**
-- [ ] `deactivate()` - 停用使用者（不可停用自己、不可停用最後一個 Admin），**記錄 Audit Log**
-- [ ] `activate()` - 啟用使用者，**記錄 Audit Log**
-- [ ] `delete()` - Soft Delete（設定 status=INACTIVE，不可刪除自己、不可刪除最後一個 Admin），**記錄 Audit Log**
+- [ ] `createUser()` - 建立新使用者，密碼 BCrypt 雜湊，檢查 email 唯一性
+- [ ] `updateUser()` - 更新使用者資料，檢查 email 唯一性（排除自己）
+- [ ] `deactivate()` - 停用使用者（不可停用自己、不可停用最後一個 Admin）
+- [ ] `activate()` - 啟用使用者
+- [ ] `delete()` - Soft Delete（設定 status=INACTIVE，不可刪除自己、不可刪除最後一個 Admin）
 - [ ] `findAll()` - 分頁查詢支援 Specification 篩選
 - [ ] `findById()` - 取得單一使用者
 - [ ] 所有操作皆有對應的例外拋出
-- [ ] **Audit Log 使用 AuditLogService abstraction**，由外部注入
 
 ### 風險與待確認
-1. **AuditLogService**：需確認是使用既有的 AuditLogService 還是建立新的 abstraction
-2. **自我操作限制**：停用/刪除自己是否為 BusinessRuleException？需與需求一致
-3. **最後一個 Admin 檢查**：需計算目前 Admin 數量是否 > 1
+1. **自我操作限制**：停用/刪除自己是否為 BusinessRuleException？需與需求一致
+2. **最後一個 Admin 檢查**：需計算目前 Admin 數量是否 > 1
 
 ---
 
@@ -222,15 +218,12 @@ src/test/java/com/pk/support_ticket_api/users/
 ### Acceptance criteria
 - [ ] `createUser_Success` - 正常建立使用者
 - [ ] `createUser_DuplicateEmail` - email 重複拋出 ConflictException
-- [ ] `createUser_CallsAuditLog` - 建立使用者時呼叫 AuditLogService
 - [ ] `updateUser_Success` - 正常更新
 - [ ] `updateUser_EmailToExisting` - 更新為已存在 email 拋出 ConflictException
-- [ ] `updateUser_CallsAuditLog` - 更新使用者時呼叫 AuditLogService
 - [ ] `deactivate_Success` - 正常停用
 - [ ] `deactivate_Yourself` - 停用自己拋出 BusinessRuleException
 - [ ] `deactivate_LastAdmin` - 停用最後一個 Admin 拋出 BusinessRuleException
 - [ ] `activate_Success` - 正常啟用
-- [ ] `activate_CallsAuditLog` - 啟用使用者時呼叫 AuditLogService
 - [ ] `delete_Success` - Soft Delete
 - [ ] `delete_Yourself` - 刪除自己拋出 BusinessRuleException
 - [ ] `delete_LastAdmin` - 刪除最後一個 Admin 拋出 BusinessRuleException
@@ -287,18 +280,16 @@ src/test/java/com/pk/support_ticket_api/users/
 
 | # | 項目 | 決策 | 原因 |
 |---|------|------|------|
-| 1 | Status 欄位 | `status` Enum (UserStatus) | 三種狀態，符合需求規格
+| 1 | Status 欄位 | `status` Enum (UserStatus) | 三種狀態，符合需求規格 |
 | 2 | 密碼複雜度 | 至少 8 碼，不強制特殊字元 | 提供基本防護，避免過度複雜的規則 |
-| 3 | Audit Log | **實作 User 管理操作的稽核** | 可追蹤高風險管理動作，適合作品集亮點 |
-| 4 | 刪除邏輯 | Soft Delete（`status=INACTIVE`） | 保留 Ticket、Comment、Audit Log 的歷史關聯 |
-| 5 | 超級管理員 | MVP 不區分 | ADMIN 已足夠，避免權限模型過早複雜化 |
+| 3 | 刪除邏輯 | Soft Delete（`status=INACTIVE`） | 保留 Ticket、Comment、Audit Log 的歷史關聯 |
+| 4 | 超級管理員 | MVP 不區分 | ADMIN 已足夠，避免權限模型過早複雜化 |
 
 ### 對計畫的影響
 
 1. **V2__seed_users.sql**：使用 `status` VARCHAR（與 V1 一致）
 2. **User Entity**：使用 `status` Enum (UserStatus)
-3. **Service 層**：需整合 Audit Log 記錄
-4. **Validation**：密碼只需 `(?=.*[a-z])(?=.*[A-Z])(?=.*\d)`，不需特殊字元
+3. **Validation**：密碼只需 `(?=.*[a-z])(?=.*[A-Z])(?=.*\d)`，不需特殊字元
 
 ---
 
