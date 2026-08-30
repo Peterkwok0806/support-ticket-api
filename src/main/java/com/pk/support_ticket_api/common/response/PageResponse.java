@@ -25,7 +25,7 @@ public record PageResponse<T>(
                         .map(mapper)
                         .toList(),
                 pageData.getNumber(),
-                pageData.getPageable().getPageSize(),
+                pageData.getContent().size(),
                 pageData.getTotalElements(),
                 pageData.getTotalPages(),
                 pageData.isFirst(),

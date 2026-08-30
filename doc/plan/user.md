@@ -148,7 +148,7 @@ src/main/java/com/pk/support_ticket_api/users/
 
 ---
 
-## Task 4: Admin API Controller
+## Task 4: Admin API Controller - 已完成實作
 
 ### 描述
 建立 UserAdminController，實作所有 Admin API 端點。
@@ -175,15 +175,15 @@ src/main/java/com/pk/support_ticket_api/users/
 - `CurrentUser` - 已存在
 
 ### Acceptance criteria
-- [ ] `GET /api/admin/users` - 分頁查詢，回傳 `PageResponse<UserResponse>`
-- [ ] `GET /api/admin/users/{id}` - 取得單一使用者
-- [ ] `POST /api/admin/users` - 建立新使用者，回傳 201 + UserResponse
-- [ ] `PUT /api/admin/users/{id}` - 更新使用者資料
-- [ ] `PATCH /api/admin/users/{id}/deactivate` - 停用使用者
-- [ ] `PATCH /api/admin/users/{id}/activate` - 啟用使用者
-- [ ] `DELETE /api/admin/users/{id}` - Soft Delete，回傳 204
-- [ ] 所有端點需要 ADMIN 角色
-- [ ] Swagger UI 可看到 API 文件
+- [x] `GET /api/admin/users` - 分頁查詢，回傳 `PageResponse<UserResponse>`
+- [x] `GET /api/admin/users/{id}` - 取得單一使用者
+- [x] `POST /api/admin/users` - 建立新使用者，回傳 201 + UserResponse
+- [x] `PUT /api/admin/users/{id}` - 更新使用者資料
+- [x] `PATCH /api/admin/users/{id}/deactivate` - 停用使用者
+- [x] `PATCH /api/admin/users/{id}/activate` - 啟用使用者
+- [x] `DELETE /api/admin/users/{id}` - Soft Delete，回傳 204
+- [x] 所有端點需要 ADMIN 角色
+- [x] Swagger UI 可看到 API 文件
 
 ### 風險與待確認
 1. **API 前綴**：需求文件使用 `/api/admin/users`，需確認與現有 Security Config 是否一致
