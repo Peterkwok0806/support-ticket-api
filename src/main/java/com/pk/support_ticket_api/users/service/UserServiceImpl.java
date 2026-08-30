@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName());
-        user.setRole(Role.valueOf(request.role()));
+        user.setRole(parseRole(request.role()));
         user.setStatus(UserStatus.ACTIVE);
 
         User saved = userRepository.save(user);
@@ -67,7 +67,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.role() != null) {
-            user.setRole(Role.valueOf(request.role()));
+            user.setRole(parseRole(request.role()));
         }
 
         User saved = userRepository.save(user);
@@ -77,8 +77,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse deactivate(UUID userId) {
         User user = findUserById(userId);
+        UUID currentUserId = getCurrentUserIdOrThrow();
 
-        if (Objects.equals(user.getId(), getCurrentUserId())) {
+        if (Objects.equals(user.getId(), currentUserId)) {
             throw new BusinessRuleException("不可停用自己的帳號");
         }
 
@@ -102,8 +103,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public void delete(UUID userId) {
         User user = findUserById(userId);
+        UUID currentUserId = getCurrentUserIdOrThrow();
 
-        if (Objects.equals(user.getId(), getCurrentUserId())) {
+        if (Objects.equals(user.getId(), currentUserId)) {
             throw new BusinessRuleException("不可刪除自己的帳號");
         }
 
@@ -139,23 +141,32 @@ public class UserServiceImpl implements UserService {
         if (user.getRole() != Role.ADMIN) {
             return false;
         }
-        long activeAdminCount = userRepository.count(
+        long otherActiveAdminCount = userRepository.count(
                 (root, query, cb) -> cb.and(
                         cb.equal(root.get("role"), Role.ADMIN),
-                        cb.equal(root.get("status"), UserStatus.ACTIVE)
+                        cb.equal(root.get("status"), UserStatus.ACTIVE),
+                        cb.notEqual(root.get("id"), user.getId())
                 ));
-        return activeAdminCount <= 1;
+        return otherActiveAdminCount == 0;
     }
 
-    private UUID getCurrentUserId() {
+    private UUID getCurrentUserIdOrThrow() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
+            throw new BusinessRuleException("無法確認操作者身份");
         }
         Object principal = authentication.getPrincipal();
         if (principal instanceof CurrentUser currentUser) {
             return currentUser.userId();
         }
-        return null;
+        throw new BusinessRuleException("無法確認操作者身份");
+    }
+
+    private Role parseRole(String roleStr) {
+        try {
+            return Role.valueOf(roleStr);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleException("無效的角色: " + roleStr);
+        }
     }
 }

@@ -100,7 +100,7 @@ src/main/java/com/pk/support_ticket_api/users/
 
 ---
 
-## Task 3: Service 層實作
+## Task 3: Service 層實作 - 已完成實作
 
 ### 描述
 建立 UserService 介面與實作，包含所有商業邏輯。
@@ -133,14 +133,14 @@ src/main/java/com/pk/support_ticket_api/users/
 - `PageResponse` - 已存在
 
 ### Acceptance criteria
-- [ ] `createUser()` - 建立新使用者，密碼 BCrypt 雜湊，檢查 email 唯一性
-- [ ] `updateUser()` - 更新使用者資料，檢查 email 唯一性（排除自己）
-- [ ] `deactivate()` - 停用使用者（不可停用自己、不可停用最後一個 Admin）
-- [ ] `activate()` - 啟用使用者
-- [ ] `delete()` - Soft Delete（設定 status=INACTIVE，不可刪除自己、不可刪除最後一個 Admin）
-- [ ] `findAll()` - 分頁查詢支援 Specification 篩選
-- [ ] `findById()` - 取得單一使用者
-- [ ] 所有操作皆有對應的例外拋出
+- [x] `createUser()` - 建立新使用者，密碼 BCrypt 雜湊，檢查 email 唯一性
+- [x] `updateUser()` - 更新使用者資料，檢查 email 唯一性（排除自己）
+- [x] `deactivate()` - 停用使用者（不可停用自己、不可停用最後一個 Admin）
+- [x] `activate()` - 啟用使用者
+- [x] `delete()` - Soft Delete（設定 status=INACTIVE，不可刪除自己、不可刪除最後一個 Admin）
+- [x] `findAll()` - 分頁查詢支援 Specification 篩選
+- [x] `findById()` - 取得單一使用者
+- [x] 所有操作皆有對應的例外拋出
 
 ### 風險與待確認
 1. **自我操作限制**：停用/刪除自己是否為 BusinessRuleException？需與需求一致
