@@ -4,7 +4,10 @@
       "Bash(sed -i '44s/active/status/' user.md)",
       "Bash(sed -i '45s/active.*而非.*/status Enum（UserStatus：ACTIVE\\\\/INACTIVE\\\\/SUSPENDED）/' user.md)",
       "Bash(sed -i '48s/active/status/' user.md)",
-      "Bash(sed -i '49s/active BOOLEAN/status VARCHAR/' user.md)"
+      "Bash(sed -i '49s/active BOOLEAN/status VARCHAR/' user.md)",
+      "Bash(mvn test *)",
+      "Bash(mvn clean *)",
+      "Bash(javap -c target/classes/com/pk/support_ticket_api/common/config/SecurityConfig.class)"
     ]
   }
 }

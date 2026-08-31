@@ -119,6 +119,13 @@
         <scope>test</scope>
     </dependency>
 
+    <!-- H2 記憶體資料庫 (測試用) -->
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>test</scope>
+    </dependency>
+
 
 	</dependencies>
 

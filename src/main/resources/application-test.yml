@@ -1,11 +1,26 @@
 spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
 
   flyway:
-    enabled: true
+    enabled: false
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   cache:
     type: none
@@ -17,12 +32,13 @@ spring:
 logging:
   level:
     root: WARN
-    com.yourname.supportticket: INFO
+    com.pk.support_ticket_api: INFO
+    org.hibernate.SQL: DEBUG
 
 app:
   jwt:
     issuer: support-ticket-api-test
-    secret: test-only-secret-must-be-long-enough-for-jwt-signing
+    secret: test-only-secret-must-be-long-enough-for-jwt-signing-at-least-256-bits
     access-token-expiration: PT30M
 
   notification:
