@@ -7,7 +7,13 @@
       "Bash(sed -i '49s/active BOOLEAN/status VARCHAR/' user.md)",
       "Bash(mvn test *)",
       "Bash(mvn clean *)",
-      "Bash(javap -c target/classes/com/pk/support_ticket_api/common/config/SecurityConfig.class)"
+      "Bash(javap -c target/classes/com/pk/support_ticket_api/common/config/SecurityConfig.class)",
+      "Bash(mkdir -p \"c:/support-ticket-api/src/main/java/com/pk/support_ticket_api/auth/exception\")",
+      "Bash(./mvnw compile *)",
+      "Bash(./mvnw test *)"
+    ],
+    "additionalDirectories": [
+      "c:\\support-ticket-api\\src\\main\\java\\com\\pk\\support_ticket_api\\auth\\exception"
     ]
   }
 }

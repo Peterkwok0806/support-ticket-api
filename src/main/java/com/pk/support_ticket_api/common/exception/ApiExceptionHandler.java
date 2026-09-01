@@ -1,7 +1,15 @@
 package com.pk.support_ticket_api.common.exception;
 
+import com.pk.support_ticket_api.auth.exception.AccountDisabledException;
+import com.pk.support_ticket_api.auth.exception.AuthException;
+import com.pk.support_ticket_api.auth.exception.InvalidCredentialsException;
+import com.pk.support_ticket_api.auth.exception.InvalidTokenException;
+import com.pk.support_ticket_api.auth.exception.RateLimitExceededException;
+import com.pk.support_ticket_api.auth.exception.TokenExpiredException;
+import com.pk.support_ticket_api.auth.exception.TokenRevokedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -82,6 +90,99 @@ public class ApiExceptionHandler {
                 request.getRequestURI(),
                 List.of()
         );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(AccountDisabledException.class)
+    public ResponseEntity<ErrorResponse> handleAccountDisabled(
+            AccountDisabledException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleTokenExpired(
+            TokenExpiredException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(TokenRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleTokenRevoked(
+            TokenRevokedException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidToken(
+            InvalidTokenException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
+            RateLimitExceededException ex,
+            HttpServletRequest request
+    ) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Retry-After", String.valueOf(ex.getRetryAfter()));
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(clock),
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                ex.getErrorCode(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of(),
+                MDC.get("traceId")
+        );
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .headers(headers)
+                .body(response);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
