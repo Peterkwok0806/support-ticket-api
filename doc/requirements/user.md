@@ -293,19 +293,12 @@ src/main/java/com/pk/support_ticket_api/users/
 | 測試類型 | 測試項目 |
 |----------|----------|
 | Unit Test | UserService 商業邏輯 |
-| Integration Test | UserRepository CRUD |
-| API Test | UserAdminController 各端點 |
-| Role Authorization Test | 驗證只有 ADMIN 可存取 |
 
 **預計產出**:
 ```
 src/test/java/com/pk/support_ticket_api/users/
-├── service/
-│   └── UserServiceTest.java
-├── repository/
-│   └── UserRepositoryTest.java
-└── web/
-    └── UserAdminControllerTest.java
+└── service/
+    └── UserServiceTest.java
 ```
 
 ---
@@ -352,7 +345,6 @@ src/test/java/com/pk/support_ticket_api/users/
 
 ### 9.3 可測試性
 - Service 層需支援 Mockito 單元測試
-- Repository 層需支援 Integration Test
 
 ---
 
@@ -374,13 +366,13 @@ src/test/java/com/pk/support_ticket_api/users/
 
 | ID | 標準 | 測試方式 |
 |----|------|----------|
-| AC-01 | Admin 可成功建立 CUSTOMER、AGENT、ADMIN 角色使用者 | POST API Test |
-| AC-02 | 建立使用者時，若 email 已存在，回傳 409 Conflict | POST API Test |
-| AC-03 | Admin 可分頁查詢所有使用者 | GET API Test |
-| AC-04 | Admin 可依 role、status、keyword 篩選使用者 | GET API Test |
-| AC-05 | Admin 可停用/啟用使用者 | PATCH API Test |
-| AC-06 | 非 ADMIN 角色存取 Admin API 回傳 403 Forbidden | API Test |
-| AC-07 | 系統啟動時自動建立 3 個 Demo 帳號 | Integration Test |
+| AC-01 | Admin 可成功建立 CUSTOMER、AGENT、ADMIN 角色使用者 | Unit Test |
+| AC-02 | 建立使用者時，若 email 已存在，回傳 409 Conflict | Unit Test |
+| AC-03 | Admin 可分頁查詢所有使用者 | Unit Test |
+| AC-04 | Admin 可依 role、status、keyword 篩選使用者 | Unit Test |
+| AC-05 | Admin 可停用/啟用使用者 | Unit Test |
+| AC-06 | 非 ADMIN 角色存取 Admin API 回傳 403 Forbidden | Unit Test |
+| AC-07 | 系統啟動時自動建立 3 個 Demo 帳號 | Unit Test |
 | AC-08 | 所有 DTO 皆有完整的 Bean Validation | Unit Test |
 
 ---
@@ -403,7 +395,7 @@ src/test/java/com/pk/support_ticket_api/users/
 | 文件 | 位置 |
 |------|------|
 | 專案概覽 | `doc/overview.md` |
-| 架構文件 | `doc/architecture/`（待建立） |
+| 架構文件 | `doc/architecture/`|
 | 其他需求文件 | `doc/requirements/` |
 
 ---

@@ -235,45 +235,6 @@ src/test/java/com/pk/support_ticket_api/users/
 
 ---
 
-## Task 6: Integration Test
-
-### 描述
-建立 Repository 和 Controller 的 Integration Test。
-
-### In scope
-- 建立 `UserRepositoryTest` - 使用 Testcontainers PostgreSQL
-- 建立 `UserAdminControllerTest` - 使用 @WebMvcTest + @WithMockUser
-
-### Out of scope
-- E2E Test
-- 效能測試
-
-### Expected files
-```
-src/test/java/com/pk/support_ticket_api/users/
-├── repository/
-│   └── UserRepositoryTest.java
-└── web/
-    └── UserAdminControllerTest.java
-```
-
-### Dependencies
-- Task 1: User Entity, UserRepository
-- Task 4: UserAdminController
-- Testcontainers PostgreSQL - 需確認專案已設定
-
-### Acceptance criteria
-- [ ] Repository Test: save、findById、existsByEmail 功能正確
-- [ ] Repository Test: email 唯一性約束有效
-- [ ] Controller Test: ADMIN 角色可成功操作（201/200）
-- [ ] Controller Test: AGENT/CUSTOMER 角色存取回傳 403
-- [ ] Controller Test: 未登入回傳 401
-- [ ] Controller Test: Validation 錯誤回傳 400
-
-### 風險與待確認
-1. **Testcontainers 設定**：需確認 pom.xml 已包含 testcontainers 依賴
-2. **測試資料隔離**：每個測試需獨立，需使用 @Transactional 自動回滾
-
 ---
 
 ## 已確認決策
@@ -298,15 +259,13 @@ src/test/java/com/pk/support_ticket_api/users/
 ```
 Task 1: User 基礎建設 ─────┐
                           ├──→ Task 2: DTO 建立 ──→ Task 3: Service ──→ Task 5: Unit Test
-Task 4: Admin API ─────────┤                                    │
-                          │                                    ▼
-                          └─────────────────────────────→ Task 6: Integration Test
+Task 4: Admin API ─────────┘
 ```
 
 **建議批次選擇**（可一次選擇多個連續任務）：
 1. **基礎批次**: Task 1 + Task 2
 2. **核心批次**: Task 3 + Task 4
-3. **測試批次**: Task 5 + Task 6
+3. **測試批次**: Task 5
 
 ---
 

@@ -378,22 +378,7 @@ public record UpdateUserRequest(
 
 ## 7. 測試策略
 
-### 7.1 測試金字塔
-
-```
-        ▲
-       /E\
-      /2E \    End-to-End Tests (可選)
-     /─────\
-    /  API  \   API Integration Tests
-   /─────────\
-  /  Unit    \  Unit Tests (Service)
- /─────────────\
-/ Repository    \ Repository Integration Tests
-─────────────────────────────
-```
-
-### 7.2 Unit Test — UserService
+### 7.1 Unit Test — UserService
 
 **測試檔案**: `src/test/java/com/pk/support_ticket_api/users/service/UserServiceTest.java`
 
@@ -413,91 +398,7 @@ public record UpdateUserRequest(
 | `delete_LastAdmin` | 刪除最後一個 Admin 拋出 BusinessRuleException |
 | `findAll_WithFilters` | 分頁查詢正確套用 Specification 條件 |
 
-### 7.3 Integration Test — UserRepository
-
-**測試檔案**: `src/test/java/com/pk/support_ticket_api/users/repository/UserRepositoryTest.java`
-
-使用 Testcontainers + PostgreSQL：
-
-```java
-@SpringBootTest
-@Testcontainers
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class UserRepositoryTest {
-    
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-    
-    @Test
-    void save_and_findById() {
-        User user = new User();
-        user.setEmail("test@example.com");
-        user.setPasswordHash("hashed");
-        user.setDisplayName("Test");
-        user.setRole(Role.AGENT);
-        
-        User saved = repository.save(user);
-        
-        assertThat(saved.getId()).isNotNull();
-        assertThat(repository.findById(saved.getId())).isPresent();
-    }
-    
-    @Test
-    void existsByEmail_returnsTrue() {
-        // given
-        repository.save(createUser("existing@test.com"));
-        // when/then
-        assertThat(repository.existsByEmail("existing@test.com")).isTrue();
-        assertThat(repository.existsByEmail("nonexistent@test.com")).isFalse();
-    }
-}
-```
-
-### 7.4 API Integration Test — UserAdminController
-
-**測試檔案**: `src/test/java/com/pk/support_ticket_api/users/web/UserAdminControllerTest.java`
-
-使用 `@WithMockUser` 模擬不同角色：
-
-```java
-@WebMvcTest(UserAdminController.class)
-class UserAdminControllerTest {
-    
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void createUser_asAdmin_returns201() {
-        // given
-        CreateUserRequest request = new CreateUserRequest(
-            "new@example.com", "Password123", "New User", Role.CUSTOMER
-        );
-        // when/then
-        mockMvc.perform(post("/api/admin/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(toJson(request)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.email").value("new@example.com"));
-    }
-    
-    @Test
-    @WithMockUser(roles = "AGENT")
-    void createUser_asAgent_returns403() {
-        mockMvc.perform(post("/api/admin/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(toJson(request)))
-            .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    void createUser_unauthenticated_returns401() {
-        mockMvc.perform(post("/api/admin/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(toJson(request)))
-            .andExpect(status().isUnauthorized());
-    }
-}
-```
-
-### 7.5 測試資料 Seed
+### 7.2 測試資料 Seed
 
 使用 Flyway `V2__seed_users.sql` 建立測試資料：
 
