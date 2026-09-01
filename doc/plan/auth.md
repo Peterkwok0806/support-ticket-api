@@ -45,11 +45,11 @@ src/main/java/com/pk/support_ticket_api/auth/
 - Spring Framework
 
 ### Acceptance criteria
-- [ ] `AuthException` 包含 errorCode 欄位
-- [ ] 各子類別正確繼承並設定對應的 errorCode
-- [ ] `ApiExceptionHandler` 可正確映射例外到 HTTP Status
-- [ ] `RateLimitExceededException` 包含 retryAfter 欄位
-- [ ] 所有例外皆可被正確序列化為 JSON 回應
+- [x] `AuthException` 包含 errorCode 欄位
+- [x] 各子類別正確繼承並設定對應的 errorCode
+- [x] `ApiExceptionHandler` 可正確映射例外到 HTTP Status
+- [x] `RateLimitExceededException` 包含 retryAfter 欄位
+- [x] 所有例外皆可被正確序列化為 JSON 回應
 
 ### 風險與待確認
 1. **Error Response 格式**：需確認與現有 ErrorResponse 格式一致
