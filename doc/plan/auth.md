@@ -91,14 +91,14 @@ src/main/java/com/pk/support_ticket_api/auth/
 - `Role` enum - 已存在
 
 ### Acceptance criteria
-- [ ] `generateToken(User)` 產生包含 sub、email、role、iat、exp、jti 的 Token
-- [ ] `validateToken(String)` 正確驗證有效 Token（回傳 true）
-- [ ] `validateToken(String)` 正確拒絕過期 Token（拋出 TokenExpiredException）
-- [ ] `validateToken(String)` 正確拒絕無效簽章（拋出 InvalidTokenException）
-- [ ] `parseToken(String)` 正確解析並回傳 CurrentUser
-- [ ] `extractJti(String)` 正確提取 jti
-- [ ] `extractExpiration(String)` 正確計算剩餘有效期（秒）
-- [ ] Token 使用 HS256 簽章
+- [x] `generateToken(User)` 產生包含 sub、email、role、iat、exp、jti 的 Token
+- [x] `validateToken(String)` 正確驗證有效 Token（回傳 true）
+- [x] `validateToken(String)` 正確拒絕過期 Token（拋出 TokenExpiredException）
+- [x] `validateToken(String)` 正確拒絕無效簽章（拋出 InvalidTokenException）
+- [x] `parseToken(String)` 正確解析並回傳 CurrentUser
+- [x] `extractJti(String)` 正確提取 jti
+- [x] `extractExpiration(String)` 正確計算剩餘有效期（秒）
+- [x] Token 使用 HS256 簽章
 
 ### 風險與待確認
 1. **JWT_SECRET 管理**：需確認環境變數注入方式
@@ -136,12 +136,12 @@ src/main/java/com/pk/support_ticket_api/auth/
 - `RedisTemplate` - 需注入
 
 ### Acceptance criteria
-- [ ] `addToBlacklist(jti, ttlSeconds)` 正確設定 Redis Key
-- [ ] `addToBlacklist` 使用 `jwt:blk:{jti}` 作為 Key
-- [ ] `addToBlacklist` 設定正確的 TTL
-- [ ] `isBlacklisted(jti)` 回傳 true 當 Token 在黑名單
-- [ ] `isBlacklisted(jti)` 回傳 false 當 Token 不在黑名單
-- [ ] 黑名單 Key 會在 TTL 過期後自動刪除
+- [x] `addToBlacklist(jti, ttlSeconds)` 正確設定 Redis Key
+- [x] `addToBlacklist` 使用 `jwt:blk:{jti}` 作為 Key
+- [x] `addToBlacklist` 設定正確的 TTL
+- [x] `isBlacklisted(jti)` 回傳 true 當 Token 在黑名單
+- [x] `isBlacklisted(jti)` 回傳 false 當 Token 不在黑名單
+- [x] 黑名單 Key 會在 TTL 過期後自動刪除
 
 ### 風險與待確認
 1. **Redis 連線配置**：確認 application.yml 中的 Redis 設定
