@@ -225,14 +225,14 @@ src/main/java/com/pk/support_ticket_api/auth/
 - `RedisTemplate` - 需注入
 
 ### Acceptance criteria
-- [ ] Filter 繼承 `OncePerRequestFilter`
-- [ ] `/api/v1/auth/login` 限制為 5 次/15 分鐘
-- [ ] 其他端點限制為 100 次/1 分鐘
-- [ ] `/actuator/health` 不受限制
-- [ ] 使用 Lua Script 確保計數原子性
-- [ ] 逾限回傳 429 狀態碼
-- [ ] 回傳 `Retry-After` Header
-- [ ] 不同 IP 獨立計數
+- [x] Filter 繼承 `OncePerRequestFilter`
+- [x] `/api/v1/auth/login` 限制為 5 次/15 分鐘
+- [x] 其他端點限制為 100 次/1 分鐘
+- [x] `/actuator/health` 不受限制
+- [x] 使用 Lua Script 確保計數原子性
+- [x] 逾限回傳 429 狀態碼
+- [x] 回傳 `Retry-After` Header
+- [x] 不同 IP 獨立計數
 
 ### 風險與待確認
 1. **Lua Script 錯誤處理**：需確認 Script 執行失敗時的處理
