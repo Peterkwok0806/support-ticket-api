@@ -4,8 +4,6 @@ import com.pk.support_ticket_api.auth.exception.InvalidTokenException;
 import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.users.domain.User;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -104,4 +102,5 @@ public class JwtServiceImpl implements JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
 }

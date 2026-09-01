@@ -180,14 +180,14 @@ src/main/java/com/pk/support_ticket_api/auth/
 - Spring Security Filter 相關類別
 
 ### Acceptance criteria
-- [ ] Filter 繼承 `OncePerRequestFilter`
-- [ ] 從 Authorization Header 正確解析 Bearer Token
-- [ ] 無 Bearer Token 時跳過（交給後續 Filter 處理）
-- [ ] 先查 Redis 黑名單，再執行 JWT 簽章驗證
-- [ ] 黑名單 Token 直接回傳 401 TOKEN_REVOKED
-- [ ] 有效 Token 正確設定 SecurityContext
-- [ ] `CurrentUser` 正確傳遞到 SecurityContext
-- [ ] 各種例外正確映射到對應的 HTTP Status
+- [x] Filter 繼承 `OncePerRequestFilter`
+- [x] 從 Authorization Header 正確解析 Bearer Token
+- [x] 無 Bearer Token 時跳過（交給後續 Filter 處理）
+- [x] 先查 Redis 黑名單，再執行 JWT 簽章驗證
+- [x] 黑名單 Token 直接回傳 401 TOKEN_REVOKED
+- [x] 有效 Token 正確設定 SecurityContext
+- [x] `CurrentUser` 正確傳遞到 SecurityContext
+- [x] 各種例外正確映射到對應的 HTTP Status
 
 ### 風險與待確認
 1. **Filter 順序**：需確認與 RateLimitingFilter 的順序關係
