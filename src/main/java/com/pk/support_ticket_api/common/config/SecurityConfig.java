@@ -1,5 +1,8 @@
 package com.pk.support_ticket_api.common.config;
 
+import com.pk.support_ticket_api.auth.filter.JwtAuthenticationFilter;
+import com.pk.support_ticket_api.auth.filter.RateLimitingFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -8,21 +11,24 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Spring Security 設定。
  *
- * 目前為預留設定，待 JWT 實作後需整合：
- * - JwtAuthenticationFilter
- * - 移除 .permitAll()（改為需要認證）
- * - 設定 JWT 相關例外處理
+ * JWT + Rate Limiting 整合：
+ * - RateLimitingFilter (順序 100)：請求頻率限制
+ * - JwtAuthenticationFilter (順序 200)：JWT 認證
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity  // 讓 @PreAuthorize 註解生效
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -35,16 +41,23 @@ public class SecurityConfig {
             // 停用 CSRF（因為使用 JWT，無需 CSRF Token）
             .csrf(AbstractHttpConfigurer::disable)
 
-            // 設定為無狀態（JWT  stateless session）
+            // 設定為無狀態（JWT stateless session）
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+            // 設定 Filter 順序：RateLimiting → JwtAuthentication → UsernamePasswordAuthentication
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class)
+
             // 設定授權規則
             .authorizeHttpRequests(auth -> auth
-                //  actuator 健康檢查端點允許所有人存取
+                // 允許匿名存取的端點
                 .requestMatchers("/actuator/health").permitAll()
-                // TODO: JWT 實作後，替换為 .anyRequest().authenticated()
-                .anyRequest().permitAll()  // 暫時全部放行，JWT 實作後關閉
+                .requestMatchers("/api/v1/auth/login").permitAll()
+                // Admin 端點需要 ADMIN 角色
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                // 其他所有端點需要已登入
+                .anyRequest().authenticated()
             );
 
         return http.build();

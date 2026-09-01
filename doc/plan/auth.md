@@ -269,13 +269,13 @@ src/main/java/com/pk/support_ticket_api/common/
 - `SecurityConfig` - 已存在，需更新
 
 ### Acceptance criteria
-- [ ] RateLimitingFilter 在 JwtAuthenticationFilter 之前執行
-- [ ] `/actuator/health` 允許匿名存取
-- [ ] `/api/v1/auth/login` 允許匿名存取
-- [ ] `/api/v1/admin/**` 需要 ADMIN 角色
-- [ ] 其他 `/api/v1/**` 需要已登入（任何角色）
-- [ ] CSRF 保持停用
-- [ ] Session 保持 STATELESS
+- [x] RateLimitingFilter 在 JwtAuthenticationFilter 之前執行
+- [x] `/actuator/health` 允許匿名存取
+- [x] `/api/v1/auth/login` 允許匿名存取
+- [x] `/api/v1/admin/**` 需要 ADMIN 角色
+- [x] 其他 `/api/v1/**` 需要已登入（任何角色）
+- [x] CSRF 保持停用
+- [x] Session 保持 STATELESS
 
 ### 風險與待確認
 1. **Filter 順序**：RateLimitingFilter (100) → JwtAuthenticationFilter (200) → AuthorizationFilter
