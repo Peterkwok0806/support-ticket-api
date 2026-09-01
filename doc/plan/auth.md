@@ -366,12 +366,12 @@ src/main/java/com/pk/support_ticket_api/auth/
 - `CurrentUser` - 已存在，需從 SecurityContext 取得
 
 ### Acceptance criteria
-- [ ] `POST /api/v1/auth/login` - 接收 LoginRequest，回傳 LoginResponse
-- [ ] `POST /api/v1/auth/logout` - 從 SecurityContext 取得 CurrentUser
-- [ ] `POST /api/v1/auth/logout` - 從 Authorization Header 取得 Token
-- [ ] 所有端點有 @Operation 標註
-- [ ] 所有端點有 @ApiResponse 標註
-- [ ] Swagger UI 可看到 API 文件
+- [x] `POST /api/v1/auth/login` - 接收 LoginRequest，回傳 LoginResponse
+- [x] `POST /api/v1/auth/logout` - 從 SecurityContext 取得 CurrentUser
+- [x] `POST /api/v1/auth/logout` - 從 Authorization Header 取得 Token
+- [x] 所有端點有 @Operation 標註
+- [x] 所有端點有 @ApiResponse 標註
+- [x] Swagger UI 可看到 API 文件
 
 ### 風險與待確認
 1. **取得 Token 方式**：從 Header 或從 SecurityContext
