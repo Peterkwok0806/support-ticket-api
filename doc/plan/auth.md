@@ -321,17 +321,17 @@ src/main/java/com/pk/support_ticket_api/auth/
 - `PasswordEncoder` - Spring Security 內建
 
 ### Acceptance criteria
-- [ ] `LoginRequest` 包含 email、password 欄位
-- [ ] `LoginRequest` 有 Bean Validation（@Email、@NotBlank）
-- [ ] `LoginResponse` 包含 accessToken、tokenType、expiresIn
-- [ ] `AuthService.login()` 正確驗證帳密
-- [ ] `AuthService.login()` 檢查帳號狀態（status != ACTIVE → AccountDisabledException）
-- [ ] `AuthService.login()` 使用 PasswordEncoder 比對密碼
-- [ ] `AuthService.login()` 產生 JWT Token
-- [ ] `AuthService.logout()` 解析 Token 的 exp Claim
-- [ ] `AuthService.logout()` 計算剩餘有效期
-- [ ] `AuthService.logout()` 呼叫 blacklistService.addToBlacklist
-- [ ] `AuthService.logout()` 不信任前端傳入的過期時間
+- [x] `LoginRequest` 包含 email、password 欄位
+- [x] `LoginRequest` 有 Bean Validation（@Email、@NotBlank）
+- [x] `LoginResponse` 包含 accessToken、tokenType、expiresIn
+- [x] `AuthService.login()` 正確驗證帳密
+- [x] `AuthService.login()` 檢查帳號狀態（status != ACTIVE → AccountDisabledException）
+- [x] `AuthService.login()` 使用 PasswordEncoder 比對密碼
+- [x] `AuthService.login()` 產生 JWT Token
+- [x] `AuthService.logout()` 解析 Token 的 exp Claim
+- [x] `AuthService.logout()` 計算剩餘有效期
+- [x] `AuthService.logout()` 呼叫 blacklistService.addToBlacklist
+- [x] `AuthService.logout()` 不信任前端傳入的過期時間
 
 ### 風險與待確認
 1. **UserRepository.findByEmail()**：需確認是否已存在，或需新增
