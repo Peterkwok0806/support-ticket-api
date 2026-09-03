@@ -1,10 +1,14 @@
 package com.pk.support_ticket_api.auth.service;
 
 import com.pk.support_ticket_api.auth.exception.InvalidTokenException;
+import com.pk.support_ticket_api.auth.exception.TokenExpiredException;
 import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.users.domain.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -86,21 +90,33 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public long extractExpiration(String token) {
-        Claims claims = parseClaims(token);
-        Date expiration = claims.getExpiration();
-        if (expiration == null) {
+        try {
+            Claims claims = parseClaims(token);
+            Date expiration = claims.getExpiration();
+            if (expiration == null) {
+                return 0;
+            }
+            long remainingMs = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remainingMs / 1000);
+        } catch (TokenExpiredException e) {
             return 0;
         }
-        long remainingMs = expiration.getTime() - System.currentTimeMillis();
-        return Math.max(0, remainingMs / 1000);
     }
 
     private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException e) {
+            throw new TokenExpiredException();
+        } catch (SignatureException e) {
+            throw new InvalidTokenException("Token signature is invalid");
+        } catch (IllegalArgumentException | JwtException e) {
+            throw new InvalidTokenException(e.getMessage());
+        }
     }
 
 }

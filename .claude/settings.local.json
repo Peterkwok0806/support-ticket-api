@@ -10,10 +10,31 @@
       "Bash(javap -c target/classes/com/pk/support_ticket_api/common/config/SecurityConfig.class)",
       "Bash(mkdir -p \"c:/support-ticket-api/src/main/java/com/pk/support_ticket_api/auth/exception\")",
       "Bash(./mvnw compile *)",
-      "Bash(./mvnw test *)"
+      "Bash(./mvnw test *)",
+      "Bash(mkdir -p \"C:/support-ticket-api/src/test/java/com/pk/support_ticket_api/auth/service\")",
+      "Bash(./mvnw dependency:tree -Dincludes=org.springframework.boot)",
+      "Bash(./mvnw clean *)",
+      "Bash(./mvnw dependency:tree)",
+      "Bash(./mvnw dependency:build-classpath -DincludeScope=test -q)",
+      "Bash(./mvnw dependency:tree -Dverbose)",
+      "Bash(./mvnw dependency:tree -Dincludes=org.mockito)",
+      "Bash(./mvnw dependency:tree -Dincludes=org.springframework.boot:spring-boot-test-autoconfigure)",
+      "Bash(./mvnw dependency:tree -Dincludes=org.springframework.security)",
+      "Bash(ls ~/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/ 2>/dev/null | head -5)",
+      "Read(//c/Users/ITU/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/**)",
+      "Bash(unzip -l ~/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/4.1.1/spring-boot-test-autoconfigure-4.1.1.jar)",
+      "Bash(./mvnw dependency:resolve -DincludeArtifactIds=spring-boot-test-autoconfigure -q)",
+      "Bash(jar tf *)",
+      "Read(//c/Users/ITU/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/4.1.1/**)",
+      "Read(//c/Users/ITU/.m2/repository/org/springframework/boot/spring-boot-test/4.1.1/**)",
+      "Bash(cd ~/.m2/repository/org/springframework/boot/spring-boot-starter-test/4.1.1/ && jar tf spring-boot-starter-test-4.1.1.jar | head -20)",
+      "Read(//c/Users/ITU/.m2/repository/org/springframework/boot/spring-boot-starter-test/4.1.1/**)",
+      "Bash(./mvnw dependency:tree -Dincludes=org.springframework.boot:spring-boot-webmvc-test)",
+      "Read(//c/Users/ITU/.m2/repository/org/springframework/boot/spring-boot-webmvc-test/4.1.1/**)"
     ],
     "additionalDirectories": [
-      "c:\\support-ticket-api\\src\\main\\java\\com\\pk\\support_ticket_api\\auth\\exception"
+      "c:\\support-ticket-api\\src\\main\\java\\com\\pk\\support_ticket_api\\auth\\exception",
+      "C:\\support-ticket-api\\src\\test\\java\\com\\pk\\support_ticket_api\\auth\\service"
     ]
   }
 }
