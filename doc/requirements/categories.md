@@ -35,26 +35,24 @@
 
 ### 2.2 資料庫 Schema 變更
 
-修改 `V1__create_initial_schema.sql` 中的 `categories` 表格：
+新增 Migration 檔案 `V3__modify_categories_add_sla.sql`：
 
 ```sql
-CREATE TABLE categories (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name            VARCHAR(100) NOT NULL UNIQUE,
-    description     TEXT,
-    sla_hours_low   INTEGER      NOT NULL DEFAULT 72
-                      CHECK (sla_hours_low BETWEEN 1 AND 720),
-    sla_hours_medium INTEGER     NOT NULL DEFAULT 48
-                      CHECK (sla_hours_medium BETWEEN 1 AND 720),
-    sla_hours_high  INTEGER      NOT NULL DEFAULT 24
-                      CHECK (sla_hours_high BETWEEN 1 AND 720),
-    sla_hours_urgent INTEGER     NOT NULL DEFAULT 4
-                      CHECK (sla_hours_urgent BETWEEN 1 AND 720),
-    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
-);
+-- V3__modify_categories_add_sla.sql
+-- 為 categories 表格新增 SLA 時數欄位
+
+ALTER TABLE categories
+    ADD COLUMN IF NOT EXISTS sla_hours_low INTEGER NOT NULL DEFAULT 72
+        CONSTRAINT chk_sla_hours_low CHECK (sla_hours_low BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_medium INTEGER NOT NULL DEFAULT 48
+        CONSTRAINT chk_sla_hours_medium CHECK (sla_hours_medium BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_high INTEGER NOT NULL DEFAULT 24
+        CONSTRAINT chk_sla_hours_high CHECK (sla_hours_high BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_urgent INTEGER NOT NULL DEFAULT 4
+        CONSTRAINT chk_sla_hours_urgent CHECK (sla_hours_urgent BETWEEN 1 AND 720);
 ```
+
+> ⚠️ **Migration 策略**：不可修改已執行的 Migration。採用新增 Migration 策略。
 
 ### 2.3 SLA 時限對照表（預設值）
 
@@ -321,14 +319,21 @@ public record CreateCategoryRequest(
 
 | 工作項目 | 說明 |
 |----------|------|
-| 修改 V1__create_initial_schema.sql | 新增 SLA 欄位至 categories 表格 |
-| 建立 V3__seed_categories.sql | 建立預設分類資料 |
+| 建立 V3__modify_categories_add_sla.sql | 新增 Migration 為 categories 表格添加 SLA 欄位 |
+| 建立 V4__seed_categories.sql | 建立預設分類資料 |
+
+> ⚠️ **Migration 策略**：不可修改已執行的 Migration。採用新增 Migration 策略：
+> - V1__create_initial_schema.sql — 保持不變（已執行）
+> - V3__modify_categories_add_sla.sql — 新增 SLA 欄位
+> - V4__seed_categories.sql — Seed 預設分類資料
 
 **預計產出**:
 ```
 src/main/resources/db/migration/
-├── V1__create_initial_schema.sql    # 修改：新增 SLA 欄位
-└── V3__seed_categories.sql          # 新增：預設分類資料
+├── V1__create_initial_schema.sql    # 保持不變
+├── V2__seed_users.sql              # 保持不變
+├── V3__modify_categories_add_sla.sql   # 新增：新增 SLA 欄位
+└── V4__seed_categories.sql           # 新增：預設分類資料
 ```
 
 ### Phase 2: 基礎建設（預計 1 天）

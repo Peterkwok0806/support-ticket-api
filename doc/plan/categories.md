@@ -33,30 +33,27 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
 
 ### 2.1 工作項目
 
-#### 2.1.1 修改 V1__create_initial_schema.sql
+> ⚠️ **重要**：不可修改已執行的 Migration 檔案。採用新增 Migration 策略。
 
-**檔案**: `src/main/resources/db/migration/V1__create_initial_schema.sql`
+#### 2.1.1 新增 V3__modify_categories_add_sla.sql
 
-**變更內容**:
+**檔案**: `src/main/resources/db/migration/V3__modify_categories_add_sla.sql`
+
+> 由於 V1__create_initial_schema.sql 已經執行且不可修改，需建立新的 Migration 來擴展 categories 表格。
+
 ```sql
--- 將原本的 categories 表格定義替換為以下內容
+-- V3__modify_categories_add_sla.sql
+-- 為 categories 表格新增 SLA 時數欄位
 
-CREATE TABLE categories (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name             VARCHAR(100) NOT NULL UNIQUE,
-    description      TEXT,
-    sla_hours_low    INTEGER      NOT NULL DEFAULT 72
-                       CHECK (sla_hours_low BETWEEN 1 AND 720),
-    sla_hours_medium INTEGER      NOT NULL DEFAULT 48
-                       CHECK (sla_hours_medium BETWEEN 1 AND 720),
-    sla_hours_high   INTEGER      NOT NULL DEFAULT 24
-                       CHECK (sla_hours_high BETWEEN 1 AND 720),
-    sla_hours_urgent INTEGER      NOT NULL DEFAULT 4
-                       CHECK (sla_hours_urgent BETWEEN 1 AND 720),
-    is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
-);
+ALTER TABLE categories
+    ADD COLUMN IF NOT EXISTS sla_hours_low INTEGER NOT NULL DEFAULT 72
+        CONSTRAINT chk_sla_hours_low CHECK (sla_hours_low BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_medium INTEGER NOT NULL DEFAULT 48
+        CONSTRAINT chk_sla_hours_medium CHECK (sla_hours_medium BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_high INTEGER NOT NULL DEFAULT 24
+        CONSTRAINT chk_sla_hours_high CHECK (sla_hours_high BETWEEN 1 AND 720),
+    ADD COLUMN IF NOT EXISTS sla_hours_urgent INTEGER NOT NULL DEFAULT 4
+        CONSTRAINT chk_sla_hours_urgent CHECK (sla_hours_urgent BETWEEN 1 AND 720);
 
 COMMENT ON TABLE categories IS '工單分類表，SLA 時數內嵌於各分類中';
 COMMENT ON COLUMN categories.sla_hours_low IS 'Low Priority SLA 小時數（預設 72 小時 = 3 天）';
@@ -65,14 +62,12 @@ COMMENT ON COLUMN categories.sla_hours_high IS 'High Priority SLA 小時數（�
 COMMENT ON COLUMN categories.sla_hours_urgent IS 'Urgent Priority SLA 小時數（預設 4 小時）';
 ```
 
-**注意**: 如需保留既有資料，需先建立修補 Migration；本專案為新專案可直接替換。
+#### 2.1.2 新增 V4__seed_categories.sql
 
-#### 2.1.2 新增 V3__seed_categories.sql
-
-**檔案**: `src/main/resources/db/migration/V3__seed_categories.sql`
+**檔案**: `src/main/resources/db/migration/V4__seed_categories.sql`
 
 ```sql
--- V3__seed_categories.sql
+-- V4__seed_categories.sql
 -- 預設分類資料，包含不同 SLA 設定
 
 INSERT INTO categories (id, name, description, sla_hours_low, sla_hours_medium, sla_hours_high, sla_hours_urgent, is_active, created_at, updated_at)
@@ -88,13 +83,21 @@ VALUES
   ('a0000000-0000-0000-0000-000000000005', '其他', '無法分類的問題', 72, 48, 24, 4, TRUE, NOW(), NOW());
 ```
 
-### 2.2 驗收條件
+### 2.2 Migration 版本順序
 
-- [ ] `V1__create_initial_schema.sql` 包含完整 categories 表格定義
-- [ ] categories 表格有 4 個 SLA 小時數欄位
-- [ ] 每個 SLA 欄位有 CHECK 約束（1-720）
-- [ ] `V3__seed_categories.sql` 包含 5 筆預設資料
-- [ ] 執行 `flyway:migrate` 成功
+| 版本 | 檔案 | 內容 | 狀態 |
+|------|------|------|------|
+| V1 | `V1__create_initial_schema.sql` | 初始 Schema（已執行） | 不修改 |
+| V2 | `V2__seed_users.sql` | 使用者 Seed（已執行） | 不修改 |
+| **V3** | `V3__modify_categories_add_sla.sql` | 新增 SLA 欄位 | **新增** |
+| **V4** | `V4__seed_categories.sql` | 預設分類資料 | **新增** |
+
+### 2.3 驗收條件
+
+- [x] `V3__modify_categories_add_sla.sql` 正確新增 4 個 SLA 欄位
+- [x] 每個 SLA 欄位有 CHECK 約束（1-720）
+- [x] `V4__seed_categories.sql` 包含 5 筆預設資料
+- [x] 執行 `flyway:migrate` 成功
 
 ---
 
@@ -1094,8 +1097,8 @@ src/test/java/com/pk/support_ticket_api/categories/
 
 | Phase | 類型 | 檔案路徑 |
 |-------|------|----------|
-| 1 | Migration | `src/main/resources/db/migration/V1__create_initial_schema.sql`（修改） |
-| 1 | Migration | `src/main/resources/db/migration/V3__seed_categories.sql`（新增） |
+| 1 | Migration | `src/main/resources/db/migration/V3__modify_categories_add_sla.sql`（新增） |
+| 1 | Migration | `src/main/resources/db/migration/V4__seed_categories.sql`（新增） |
 | 2 | Entity | `src/main/java/.../categories/domain/Category.java` |
 | 2 | Specification | `src/main/java/.../categories/domain/CategorySpecification.java` |
 | 2 | Repository | `src/main/java/.../categories/repository/CategoryRepository.java` |
@@ -1112,15 +1115,15 @@ src/test/java/com/pk/support_ticket_api/categories/
 | 5 | Test | `src/test/java/.../categories/service/CategoryServiceTest.java` |
 | 5 | Test | `src/test/java/.../categories/service/SlaCalculatorTest.java` |
 
-**總計**: 2 個修改檔案 + 15 個新增檔案
+**總計**: 2 個新增 Migration + 15 個程式檔案
 
 ---
 
 ## 8. 實作檢查清單
 
 ### Phase 1：資料庫變更
-- [ ] 修改 `V1__create_initial_schema.sql`
-- [ ] 新增 `V3__seed_categories.sql`
+- [ ] 建立 `V3__modify_categories_add_sla.sql`
+- [ ] 建立 `V4__seed_categories.sql`
 - [ ] 執行 Flyway migrate
 
 ### Phase 2：基礎建設

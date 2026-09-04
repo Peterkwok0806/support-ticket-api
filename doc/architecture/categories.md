@@ -442,18 +442,18 @@ public record UpdateCategoryRequest(
 
 ### 7.3 測試資料 Seed
 
-使用 Flyway `V3__seed_categories.sql` 建立測試資料：
+使用 Flyway `V4__seed_categories.sql` 建立測試資料：
 
 ```sql
 INSERT INTO categories (id, name, description, sla_hours_low, sla_hours_medium, sla_hours_high, sla_hours_urgent, is_active, created_at, updated_at)
 VALUES
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '技術問題',
+  ('a0000000-0000-0000-0000-000000000001', '技術問題',
    '軟硬體技術相關問題', 72, 48, 24, 4, TRUE, NOW(), NOW()),
   
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '帳務相關',
+  ('a0000000-0000-0000-0000-000000000002', '帳務相關',
    '帳單、付款、發票等問題', 96, 72, 48, 8, TRUE, NOW(), NOW()),
   
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '停用的分類',
+  ('a0000000-0000-0000-0000-000000000003', '停用的分類',
    '已停用的測試分類', 72, 48, 24, 4, FALSE, NOW(), NOW());
 ```
 
@@ -501,7 +501,7 @@ VALUES
 | SlaCalculator | `categories/service/SlaCalculator.java` | SLA 計算 |
 | CategoryAdminController | `categories/web/CategoryAdminController.java` | Admin API |
 | CategoryController | `categories/web/CategoryController.java` | Public API |
-| V3__seed_categories | `resources/db/migration/V3__seed_categories.sql` | 測試資料 |
+| V4__seed_categories | `resources/db/migration/V4__seed_categories.sql` | 測試資料 |
 
 ### 9.2 與 Ticket 模組的整合點
 
