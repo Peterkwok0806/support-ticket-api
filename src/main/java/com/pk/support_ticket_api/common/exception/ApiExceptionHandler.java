@@ -1,7 +1,6 @@
 package com.pk.support_ticket_api.common.exception;
 
 import com.pk.support_ticket_api.auth.exception.AccountDisabledException;
-import com.pk.support_ticket_api.auth.exception.AuthException;
 import com.pk.support_ticket_api.auth.exception.InvalidCredentialsException;
 import com.pk.support_ticket_api.auth.exception.InvalidTokenException;
 import com.pk.support_ticket_api.auth.exception.RateLimitExceededException;
