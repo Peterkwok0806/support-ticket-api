@@ -6,8 +6,8 @@ import com.pk.support_ticket_api.categories.service.SlaCalculator;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
+import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
-import com.pk.support_ticket_api.tickets.dto.CreateTicketRequest;
 import com.pk.support_ticket_api.tickets.dto.TicketStatusUpdateRequest;
 import com.pk.support_ticket_api.tickets.repository.TicketRepository;
 import com.pk.support_ticket_api.users.repository.UserRepository;
@@ -63,13 +63,22 @@ class TicketServiceTest {
     private UUID ticketId;
     private UUID categoryId;
     private UUID userId;
+    private UUID agentId;
+    private UUID adminId;
     private Category testCategory;
+    private CurrentUser adminUser;
+    private CurrentUser agentUser;
 
     @BeforeEach
     void setUp() {
         ticketId = UUID.randomUUID();
         categoryId = UUID.randomUUID();
         userId = UUID.randomUUID();
+        agentId = UUID.randomUUID();
+        adminId = UUID.randomUUID();
+
+        adminUser = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+        agentUser = new CurrentUser(agentId, "agent@test.com", "AGENT");
 
         testCategory = new Category();
         ReflectionTestUtils.setField(testCategory, "id", categoryId);
@@ -87,15 +96,14 @@ class TicketServiceTest {
     class UpdateStatus {
 
         @Test
-        @DisplayName("狀態從 OPEN 轉換到 IN_PROGRESS 應成功")
-        void updateStatus_openToInProgress_shouldSucceed() {
-            Ticket ticket = createTicket(TicketStatus.OPEN);
+        @DisplayName("ADMIN 可變更任何 Ticket 狀態")
+        void updateStatus_adminCanChangeAnyStatus() {
+            Ticket ticket = createTicket(TicketStatus.OPEN, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.IN_PROGRESS);
-            ticketService.updateStatus(ticketId, request);
+            ticketService.updateStatus(ticketId, request, adminUser);
 
             verify(ticketRepository).save(argThat(t ->
                 t.getStatus() == TicketStatus.IN_PROGRESS &&
@@ -104,14 +112,28 @@ class TicketServiceTest {
         }
 
         @Test
+        @DisplayName("AGENT 可變更加給自己的 Ticket 狀態")
+        void updateStatus_agentCanChangeAssignedStatus() {
+            Ticket ticket = createTicket(TicketStatus.OPEN, userId);
+            ticket.setAssignedTo(agentId);
+            when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
+            when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.IN_PROGRESS);
+            ticketService.updateStatus(ticketId, request, agentUser);
+
+            verify(ticketRepository).save(argThat(t -> t.getStatus() == TicketStatus.IN_PROGRESS));
+        }
+
+        @Test
         @DisplayName("狀態從 CLOSED 轉換到 OPEN 應拋出 ForbiddenOperationException")
         void updateStatus_closedToOpen_shouldThrowException() {
-            Ticket ticket = createTicket(TicketStatus.CLOSED);
+            Ticket ticket = createTicket(TicketStatus.CLOSED, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.OPEN);
 
-            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request))
+            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request, adminUser))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("Cannot transition");
         }
@@ -119,12 +141,13 @@ class TicketServiceTest {
         @Test
         @DisplayName("轉換到 RESOLVED 時應設定 resolvedAt")
         void updateStatus_toResolved_shouldSetResolvedAt() {
-            Ticket ticket = createTicket(TicketStatus.IN_PROGRESS);
+            Ticket ticket = createTicket(TicketStatus.IN_PROGRESS, userId);
+            ticket.setAssignedTo(agentId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.RESOLVED);
-            ticketService.updateStatus(ticketId, request);
+            ticketService.updateStatus(ticketId, request, agentUser);
 
             verify(ticketRepository).save(argThat(t ->
                 t.getStatus() == TicketStatus.RESOLVED &&
@@ -135,12 +158,13 @@ class TicketServiceTest {
         @Test
         @DisplayName("轉換到 CLOSED 時應設定 closedAt")
         void updateStatus_toClosed_shouldSetClosedAt() {
-            Ticket ticket = createTicket(TicketStatus.RESOLVED);
+            Ticket ticket = createTicket(TicketStatus.RESOLVED, userId);
+            ticket.setAssignedTo(agentId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.CLOSED);
-            ticketService.updateStatus(ticketId, request);
+            ticketService.updateStatus(ticketId, request, agentUser);
 
             verify(ticketRepository).save(argThat(t ->
                 t.getStatus() == TicketStatus.CLOSED &&
@@ -151,12 +175,12 @@ class TicketServiceTest {
         @Test
         @DisplayName("OPEN 無法直接轉換到 RESOLVED")
         void updateStatus_openToResolved_shouldThrowException() {
-            Ticket ticket = createTicket(TicketStatus.OPEN);
+            Ticket ticket = createTicket(TicketStatus.OPEN, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.RESOLVED);
 
-            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request))
+            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request, adminUser))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("Cannot transition");
         }
@@ -164,12 +188,12 @@ class TicketServiceTest {
         @Test
         @DisplayName("IN_PROGRESS 無法直接轉換到 CLOSED")
         void updateStatus_inProgressToClosed_shouldThrowException() {
-            Ticket ticket = createTicket(TicketStatus.IN_PROGRESS);
+            Ticket ticket = createTicket(TicketStatus.IN_PROGRESS, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.CLOSED);
 
-            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request))
+            assertThatThrownBy(() -> ticketService.updateStatus(ticketId, request, adminUser))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("Cannot transition");
         }
@@ -181,7 +205,7 @@ class TicketServiceTest {
         @Test
         @DisplayName("更新已關閉的工單應拋出例外")
         void updateTicket_closedTicket_shouldThrowException() {
-            Ticket ticket = createTicket(TicketStatus.CLOSED);
+            Ticket ticket = createTicket(TicketStatus.CLOSED, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             assertThatThrownBy(() -> ticketService.updateTicket(ticketId,
@@ -193,7 +217,7 @@ class TicketServiceTest {
         @Test
         @DisplayName("更新 OPEN 狀態的工單應成功")
         void updateTicket_openTicket_shouldSucceed() {
-            Ticket ticket = createTicket(TicketStatus.OPEN);
+            Ticket ticket = createTicket(TicketStatus.OPEN, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
             when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(testCategory));
@@ -216,7 +240,7 @@ class TicketServiceTest {
         @Test
         @DisplayName("指派已關閉的工單應拋出例外")
         void assignTicket_closedTicket_shouldThrowException() {
-            Ticket ticket = createTicket(TicketStatus.CLOSED);
+            Ticket ticket = createTicket(TicketStatus.CLOSED, userId);
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             assertThatThrownBy(() -> ticketService.assignTicket(ticketId,
@@ -228,7 +252,7 @@ class TicketServiceTest {
         @Test
         @DisplayName("指派有效的使用者應成功")
         void assignTicket_validUser_shouldSucceed() {
-            Ticket ticket = createTicket(TicketStatus.OPEN);
+            Ticket ticket = createTicket(TicketStatus.OPEN, userId);
             UUID assigneeId = UUID.randomUUID();
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -241,14 +265,14 @@ class TicketServiceTest {
         }
     }
 
-    private Ticket createTicket(TicketStatus status) {
+    private Ticket createTicket(TicketStatus status, UUID createdBy) {
         Ticket ticket = new Ticket();
         ReflectionTestUtils.setField(ticket, "id", ticketId);
         ticket.setTitle("Test Ticket");
         ticket.setStatus(status);
         ticket.setPriority(TicketPriority.MEDIUM);
         ticket.setCategoryId(categoryId);
-        ticket.setCreatedBy(userId);
+        ticket.setCreatedBy(createdBy);
         ReflectionTestUtils.setField(ticket, "createdAt", Instant.now());
         return ticket;
     }

@@ -10,6 +10,7 @@ import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
 import com.pk.support_ticket_api.common.response.PageResponse;
+import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
 import com.pk.support_ticket_api.tickets.domain.TicketSpecification;
 import com.pk.support_ticket_api.tickets.dto.*;
@@ -24,11 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,8 +66,13 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional(readOnly = true)
-    public TicketResponse getTicketById(UUID id) {
+    public TicketResponse getTicketById(UUID id, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
+
+        if (!hasReadPermission(ticket, currentUser)) {
+            throw new ForbiddenOperationException("No permission to view this ticket");
+        }
+
         return enrichResponse(ticket);
     }
 
@@ -78,16 +80,19 @@ public class TicketServiceImpl implements TicketService {
     @Transactional(readOnly = true)
     public PageResponse<TicketSummaryResponse> getTickets(
             TicketFilterRequest filter,
-            Pageable pageable
+            Pageable pageable,
+            CurrentUser currentUser
     ) {
+        TicketFilterRequest adjustedFilter = applyPermissionFilter(filter, currentUser);
+
         Page<Ticket> page = ticketRepository.findAll(
             TicketSpecification.withFilters(
-                filter.statuses(),
-                filter.priority(),
-                filter.categoryId(),
-                filter.assignedTo(),
-                filter.createdBy(),
-                filter.keyword()
+                adjustedFilter.statuses(),
+                adjustedFilter.priority(),
+                adjustedFilter.categoryId(),
+                adjustedFilter.assignedTo(),
+                adjustedFilter.createdBy(),
+                adjustedFilter.keyword()
             ),
             pageable
         );
@@ -126,8 +131,12 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public TicketResponse updateStatus(UUID id, TicketStatusUpdateRequest request) {
+    public TicketResponse updateStatus(UUID id, TicketStatusUpdateRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
+
+        if (!canChangeStatus(ticket, currentUser)) {
+            throw new ForbiddenOperationException("No permission to change ticket status");
+        }
 
         if (!stateMachine.canTransition(ticket.getStatus(), request.status())) {
             throw new ForbiddenOperationException(String.format(
@@ -244,5 +253,48 @@ public class TicketServiceImpl implements TicketService {
             response.createdAt(),
             response.updatedAt()
         );
+    }
+
+    private boolean hasReadPermission(Ticket ticket, CurrentUser currentUser) {
+        return switch (currentUser.role()) {
+            case "ADMIN" -> true;
+            case "AGENT" -> ticket.getAssignedTo() != null
+                    && ticket.getAssignedTo().equals(currentUser.userId());
+            case "CUSTOMER" -> ticket.getCreatedBy().equals(currentUser.userId());
+            default -> false;
+        };
+    }
+
+    private boolean canChangeStatus(Ticket ticket, CurrentUser currentUser) {
+        return switch (currentUser.role()) {
+            case "ADMIN" -> true;
+            case "AGENT" -> ticket.getAssignedTo() != null
+                    && ticket.getAssignedTo().equals(currentUser.userId());
+            case "CUSTOMER" -> false;
+            default -> false;
+        };
+    }
+
+    private TicketFilterRequest applyPermissionFilter(TicketFilterRequest filter, CurrentUser currentUser) {
+        return switch (currentUser.role()) {
+            case "ADMIN" -> filter;
+            case "AGENT" -> new TicketFilterRequest(
+                filter.statuses(),
+                filter.priority(),
+                filter.categoryId(),
+                currentUser.userId(),
+                null,
+                filter.keyword()
+            );
+            case "CUSTOMER" -> new TicketFilterRequest(
+                filter.statuses(),
+                filter.priority(),
+                filter.categoryId(),
+                null,
+                currentUser.userId(),
+                filter.keyword()
+            );
+            default -> filter;
+        };
     }
 }

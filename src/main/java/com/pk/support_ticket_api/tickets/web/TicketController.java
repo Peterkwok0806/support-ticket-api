@@ -17,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ public class TicketController {
     private final TicketService ticketService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
     @Operation(summary = "建立工單", description = "建立新的支援工單")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "成功建立"),
@@ -53,8 +55,11 @@ public class TicketController {
         @ApiResponse(responseCode = "200", description = "成功取得"),
         @ApiResponse(responseCode = "404", description = "工單不存在")
     })
-    public ResponseEntity<TicketResponse> getById(@PathVariable UUID id) {
-        TicketResponse response = ticketService.getTicketById(id);
+    public ResponseEntity<TicketResponse> getById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        TicketResponse response = ticketService.getTicketById(id, currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -71,15 +76,17 @@ public class TicketController {
             @RequestParam(required = false) UUID createdBy,
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            Pageable pageable,
+            @AuthenticationPrincipal CurrentUser currentUser
     ) {
         TicketFilterRequest filter = new TicketFilterRequest(
             statuses, priority, categoryId, assignedTo, createdBy, keyword);
-        PageResponse<TicketSummaryResponse> response = ticketService.getTickets(filter, pageable);
+        PageResponse<TicketSummaryResponse> response = ticketService.getTickets(filter, pageable, currentUser);
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "更新工單", description = "更新工單基本資訊（標題、描述、分類、優先級）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功更新"),
@@ -96,21 +103,25 @@ public class TicketController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     @Operation(summary = "變更工單狀態", description = "變更工單狀態（需符合狀態機規則）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功變更"),
         @ApiResponse(responseCode = "404", description = "工單不存在"),
+        @ApiResponse(responseCode = "403", description = "無權限變更此工單"),
         @ApiResponse(responseCode = "409", description = "不允許的狀態轉換")
     })
     public ResponseEntity<TicketResponse> updateStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody TicketStatusUpdateRequest request
+            @Valid @RequestBody TicketStatusUpdateRequest request,
+            @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        TicketResponse response = ticketService.updateStatus(id, request);
+        TicketResponse response = ticketService.updateStatus(id, request, currentUser);
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "指派工單", description = "指派工單給客服人員（傳入 null 取消指派）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功指派"),
