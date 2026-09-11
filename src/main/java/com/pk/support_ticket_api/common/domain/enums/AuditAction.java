@@ -9,6 +9,5 @@ public enum AuditAction {
     COMMENT_ADDED,
     ATTACHMENT_ADDED,
     RESOLVED,
-    CLOSED,
-    REOPENED
+    CLOSED
 }
