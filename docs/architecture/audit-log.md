@@ -579,7 +579,52 @@ public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) 
 
 ---
 
-## 8. 技術決策摘要
+## 8. 資料庫 Migration
+
+### ⚠️ Migration 策略
+
+由於 V1__create_initial_schema.sql 中已存在一個通用型 `audit_logs` 表格，與本模組的專用設計衝突。
+
+**Migration 策略**：單一 V7 Migration（DROP + CREATE 在同一檔案中）
+
+### 8.1 V7：刪除舊表 + 建立新表
+
+```sql
+-- V7: 刪除舊表 + 建立新表
+-- 由於 V1__create_initial_schema.sql 中已存在通用型 audit_logs 表格，
+-- 與本模組的專用型設計不相容，因此需先刪除舊表再建立新表
+
+-- 刪除舊的通用型 audit_logs 表格
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+-- 建立專用型 audit_logs 表格
+CREATE TABLE audit_logs (
+    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id        UUID            NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    ticket_id       UUID            NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    action          VARCHAR(30)     NOT NULL,
+    field_name      VARCHAR(30),
+    old_value       VARCHAR(500),
+    new_value       VARCHAR(500),
+    internal        BOOLEAN,
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT now()
+);
+
+-- 索引
+CREATE INDEX idx_audit_logs_ticket_id ON audit_logs(ticket_id);
+CREATE INDEX idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX idx_audit_logs_ticket_created ON audit_logs(ticket_id, created_at DESC);
+```
+
+### ⚠️ Migration 警告
+
+1. **資料丢失**：執行 Migration 後，舊的 `audit_logs` 資料將被刪除
+2. **不可逆**：此操作無法撤銷，請確認後再執行
+
+---
+
+## 9. 技術決策摘要
 
 | 決策 | 選擇 | 理由 |
 |------|------|------|
@@ -594,7 +639,7 @@ public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) 
 
 ---
 
-## 9. 測試策略
+## 10. 測試策略
 
 | 測試類型 | 目標 | 覆蓋重點 |
 |----------|------|----------|
@@ -602,7 +647,7 @@ public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) 
 | `TicketAuditLogControllerTest` | API 端點 | HTTP 請求/回應驗證；角色權限 |
 | `TicketServiceImplAuditTest` | 整合測試 | Audit Log 寫入驗證 |
 
-### 9.1 權限測試重點
+### 10.1 權限測試重點
 
 | 測試情境 | 預期行為 |
 |----------|----------|
@@ -612,7 +657,7 @@ public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) 
 | Agent 查詢未被指派 Ticket 的 Audit Log | ❌ ForbiddenOperationException |
 | Admin 查詢任何 Ticket 的 Audit Log | ✅ 成功 |
 
-### 9.2 寫入測試重點
+### 10.2 寫入測試重點
 
 | 測試情境 | 預期行為 |
 |----------|----------|
@@ -626,7 +671,7 @@ public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) 
 
 ---
 
-## 10. 未來擴展方向（Out of Scope）
+## 11. 未來擴展方向（Out of Scope）
 
 - Admin 全域 Audit Log 查詢端點（`/admin/audit-logs`）
 - Audit Log Export 功能（CSV/Excel）

@@ -4,10 +4,26 @@
 
 | 項目 | 內容 |
 |------|------|
-| 版本 | v1.1 |
+| 版本 | v1.3 |
 | 日期 | 2026-09-11 |
 | 狀態 | 待實作 |
-| 更新 | 加入 Phase 4 Unit Test（必做）|
+| 更新 | 改為單一 V7 Migration（DROP + CREATE）|
+
+---
+
+## ⚠️ Migration 策略
+
+由於 V1__create_initial_schema.sql 中已存在一個通用的 `audit_logs` 表格，與本計劃的專用設計衝突。
+
+**Migration 策略**：單一 V7 Migration（DROP + CREATE 在同一檔案中）
+
+```
+V7__create_audit_logs_table.sql  ← 刪除舊表 + 建立新表
+```
+
+**優點**：
+- 簡單，一個檔案管理
+- 失敗時要么全成功要么全失敗（原子性）
 
 ---
 
@@ -167,16 +183,22 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
 ---
 
-### Step 1.5：建立 Migration 檔案
+### Step 1.5：建立 Migration 檔案（單一 V7）
 
 **檔案位置**：`src/main/resources/db/migration/V7__create_audit_logs_table.sql`
 
 **新建內容**：
 
 ```sql
--- Audit Log 稽核日誌表
--- 用於記錄 Ticket 的所有重要操作，支援可追溯性與可稽核性
+-- V7: 刪除舊表 + 建立新表
+-- 由於 V1__create_initial_schema.sql 中已存在通用型 audit_logs 表格，
+-- 與本計劃的專用型設計不相容，因此需先刪除舊表再建立新表
 
+-- 刪除舊的通用型 audit_logs 表格
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+-- 建立專用型 audit_logs 表格
+-- 用於記錄 Ticket 相關的所有重要操作，支援可追溯性與可稽核性
 CREATE TABLE audit_logs (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     actor_id        UUID            NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -1310,7 +1332,7 @@ class TicketServiceAuditTest {
 - [ ] Step 1.2：建立 AuditFieldName.java 枚舉
 - [ ] Step 1.3：建立 AuditLog.java Entity（含工廠方法）
 - [ ] Step 1.4：建立 AuditLogRepository.java
-- [ ] Step 1.5：建立 V7__create_audit_logs_table.sql
+- [ ] Step 1.5：建立 V7__create_audit_logs_table.sql（刪除舊表 + 建立新表）
 
 ### Phase 2：查詢 API
 
@@ -1337,7 +1359,7 @@ class TicketServiceAuditTest {
 
 ### Phase 5：驗證
 
-- [ ] Step 5.1：執行 Migration
+- [ ] Step 5.1：執行 Migration（V7__create_audit_logs_table.sql）
 - [ ] Step 5.2：執行編譯
 - [ ] Step 5.3：執行所有測試
 
@@ -1363,7 +1385,7 @@ src/main/java/com/pk/support_ticket_api/audit/
     └── TicketAuditLogController.java
 
 src/main/resources/db/migration/
-└── V7__create_audit_logs_table.sql
+└── V7__create_audit_logs_table.sql    # 單一 Migration（DROP + CREATE）
 
 src/test/java/com/pk/support_ticket_api/audit/
 ├── domain/
@@ -1385,4 +1407,27 @@ src/main/java/com/pk/support_ticket_api/
 
 ---
 
-*實作步驟版本：v1.1 | 2026-09-11 | 含必做 Unit Test*
+## ⚠️ Migration 執行警告
+
+執行 Migration 前，請注意以下事項：
+
+1. **資料丢失**：V7 Migration 會刪除舊的 `audit_logs` 表格，所有現有資料將被刪除
+2. **依賴檢查**：確保沒有其他程式碼依賴舊的 `audit_logs` 表格結構
+3. **備份建議**：如有需要，先備份舊資料
+
+### Migration 執行
+
+```bash
+# 1. 確認當前 Migration 狀態
+./mvnw flyway:info
+
+# 2. 執行 Migration（V7__create_audit_logs_table.sql）
+./mvnw flyway:migrate
+
+# 3. 確認結果
+./mvnw flyway:info
+```
+
+---
+
+*實作步驟版本：v1.3 | 2026-09-11 | 單一 V7 Migration（DROP + CREATE）*

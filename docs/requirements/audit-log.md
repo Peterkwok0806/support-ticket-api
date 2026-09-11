@@ -4,9 +4,10 @@
 
 | 項目 | 內容 |
 |------|------|
-| 計劃版本 | v1.0 |
+| 計劃版本 | v1.2 |
 | 日期 | 2026-09-11 |
 | 狀態 | ✅ 已確認 |
+| 更新 | 改為單一 V7 Migration |
 
 ---
 
@@ -45,6 +46,36 @@
 | `VersionedEntity` | ✅ 可用 | 主鍵 + createdAt + updatedAt |
 | Flyway Migration | ✅ 可用 | 資料庫版本管理 |
 | `PageResponse` | ✅ 可用 | 統一分頁格式 |
+
+### 2.2 現有 Schema 衝突
+
+⚠️ **重要**：`V1__create_initial_schema.sql` 中已存在一個通用型 `audit_logs` 表格，設計如下：
+
+```sql
+CREATE TABLE audit_logs (
+    id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type    VARCHAR(100) NOT NULL,  -- TICKET/COMMENT/USER/CATEGORY
+    entity_id      UUID         NOT NULL,
+    operation      VARCHAR(20)  NOT NULL,  -- CREATE/UPDATE/DELETE
+    actor_user_id  UUID         REFERENCES users(id),
+    old_values     JSONB,
+    new_values     JSONB,
+    changed_fields JSONB,
+    ...
+);
+```
+
+**衝突點**：
+- V1 為通用型設計（entity_type/entity_id）
+- 本計劃為專用型設計（ticket_id + action）
+- 兩者不相容，需刪除重建
+
+### 2.3 Migration 策略
+
+採用 **Clean Drop** 策略：
+- V7：刪除舊的通用型 `audit_logs` 表格
+- V8：建立新的專用型 `audit_logs` 表格
+- 原有資料將被刪除（如有需要請先備份）
 
 ---
 
@@ -146,11 +177,32 @@ public enum AuditAction {
 
 ## 5. 資料庫 Migration
 
-### 5.1 Migration 檔案
+### ⚠️ Migration 策略
+
+由於 V1__create_initial_schema.sql 中已存在一個通用型 `audit_logs` 表格，與本計劃的專用設計衝突，需要執行以下 Migration：
+
+| 選項 | 說明 | 適用情境 |
+|------|------|----------|
+| **Clean Drop（採用）** | 刪除舊表格重建，**資料會丢失** | 尚未正式使用或可接受資料丢失 |
+
+### 5.1 Migration（單一 V7）
+
+```
+V7__create_audit_logs_table.sql  ← 刪除舊表 + 建立新表
+```
+
+### 5.2 V7：刪除舊表 + 建立新表
 
 ```sql
--- V7__create_audit_logs_table.sql
+-- V7: 刪除舊表 + 建立新表
+-- 由於 V1__create_initial_schema.sql 中已存在通用型 audit_logs 表格，
+-- 與本計劃的專用型設計不相容，因此需先刪除舊表再建立新表
 
+-- 刪除舊的通用型 audit_logs 表格
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+-- 建立專用型 audit_logs 表格
+-- 用於記錄 Ticket 相關的所有重要操作，支援可追溯性與可稽核性
 CREATE TABLE audit_logs (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     actor_id        UUID            NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -165,8 +217,14 @@ CREATE TABLE audit_logs (
 
 -- 註解
 COMMENT ON TABLE audit_logs IS '操作稽核日誌，記錄所有重要操作';
-COMMENT ON COLUMN audit_logs.field_name IS '變更的欄位名稱（STATUS/PRIORITY/ASSIGNEE等），非欄位變更時可為空';
+COMMENT ON COLUMN audit_logs.actor_id IS '執行操作的使用者 ID';
+COMMENT ON COLUMN audit_logs.ticket_id IS '操作發生的 Ticket ID';
+COMMENT ON COLUMN audit_logs.action IS '操作類型（TICKET_CREATED/STATUS_CHANGED/PRIORITY_CHANGED/ASSIGNED/UNASSIGNED/COMMENT_ADDED/RESOLVED/CLOSED）';
+COMMENT ON COLUMN audit_logs.field_name IS '變更的欄位名稱（STATUS/PRIORITY/ASSIGNEE），非欄位變更時可為空';
+COMMENT ON COLUMN audit_logs.old_value IS '變更前的值';
+COMMENT ON COLUMN audit_logs.new_value IS '變更後的值';
 COMMENT ON COLUMN audit_logs.internal IS '是否為內部操作，用於 COMMENT_ADDED 事件';
+COMMENT ON COLUMN audit_logs.created_at IS '操作發生的時間';
 
 -- 索引設計
 CREATE INDEX idx_audit_logs_ticket_id ON audit_logs(ticket_id);
@@ -174,6 +232,12 @@ CREATE INDEX idx_audit_logs_actor_id ON audit_logs(actor_id);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX idx_audit_logs_ticket_created ON audit_logs(ticket_id, created_at DESC);
 ```
+
+### ⚠️ Migration 執行警告
+
+1. **資料丢失**：V7 Migration 會刪除舊的 `audit_logs` 表格，所有現有資料將被刪除
+2. **依賴檢查**：確保沒有其他程式碼依賴舊的 `audit_logs` 表格結構
+3. **備份建議**：如有需要，先備份舊資料
 
 ---
 
