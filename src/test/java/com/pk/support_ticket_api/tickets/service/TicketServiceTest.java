@@ -1,5 +1,6 @@
 package com.pk.support_ticket_api.tickets.service;
 
+import com.pk.support_ticket_api.audit.repository.AuditLogRepository;
 import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
@@ -41,6 +42,9 @@ class TicketServiceTest {
 
     @Mock
     private TicketRepository ticketRepository;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @Spy
     private TicketStateMachine stateMachine = new TicketStateMachine();
@@ -209,7 +213,7 @@ class TicketServiceTest {
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             assertThatThrownBy(() -> ticketService.updateTicket(ticketId,
-                new com.pk.support_ticket_api.tickets.dto.UpdateTicketRequest("新標題", null, null, null)))
+                new com.pk.support_ticket_api.tickets.dto.UpdateTicketRequest("新標題", null, null, null), adminUser))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("Cannot update closed ticket");
         }
@@ -224,7 +228,7 @@ class TicketServiceTest {
             when(slaCalculator.calculateSlaDueAt(any(), any(), any())).thenReturn(Instant.now().plusSeconds(86400));
 
             var request = new com.pk.support_ticket_api.tickets.dto.UpdateTicketRequest("更新標題", "更新描述", null, TicketPriority.HIGH);
-            ticketService.updateTicket(ticketId, request);
+            ticketService.updateTicket(ticketId, request, adminUser);
 
             verify(ticketRepository).save(argThat(t ->
                 "更新標題".equals(t.getTitle()) &&
@@ -244,7 +248,7 @@ class TicketServiceTest {
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
 
             assertThatThrownBy(() -> ticketService.assignTicket(ticketId,
-                new com.pk.support_ticket_api.tickets.dto.TicketAssignRequest(null)))
+                new com.pk.support_ticket_api.tickets.dto.TicketAssignRequest(null), adminUser))
                 .isInstanceOf(ForbiddenOperationException.class)
                 .hasMessageContaining("Cannot assign closed ticket");
         }
@@ -259,7 +263,7 @@ class TicketServiceTest {
             when(userRepository.existsById(assigneeId)).thenReturn(true);
 
             var request = new com.pk.support_ticket_api.tickets.dto.TicketAssignRequest(assigneeId);
-            ticketService.assignTicket(ticketId, request);
+            ticketService.assignTicket(ticketId, request, adminUser);
 
             verify(ticketRepository).save(argThat(t -> assigneeId.equals(t.getAssignedTo())));
         }

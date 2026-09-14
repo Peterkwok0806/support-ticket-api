@@ -96,9 +96,10 @@ public class TicketController {
     })
     public ResponseEntity<TicketResponse> update(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateTicketRequest request
+            @Valid @RequestBody UpdateTicketRequest request,
+            @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        TicketResponse response = ticketService.updateTicket(id, request);
+        TicketResponse response = ticketService.updateTicket(id, request, currentUser);
         return ResponseEntity.ok(response);
     }
 
@@ -130,9 +131,10 @@ public class TicketController {
     })
     public ResponseEntity<TicketResponse> assign(
             @PathVariable UUID id,
-            @Valid @RequestBody TicketAssignRequest request
+            @Valid @RequestBody TicketAssignRequest request,
+            @AuthenticationPrincipal CurrentUser currentUser
     ) {
-        TicketResponse response = ticketService.assignTicket(id, request);
+        TicketResponse response = ticketService.assignTicket(id, request, currentUser);
         return ResponseEntity.ok(response);
     }
 }

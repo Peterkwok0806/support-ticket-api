@@ -19,11 +19,11 @@ public interface TicketService {
         CurrentUser currentUser
     );
 
-    TicketResponse updateTicket(UUID id, UpdateTicketRequest request);
+    TicketResponse updateTicket(UUID id, UpdateTicketRequest request, CurrentUser currentUser);
 
     TicketResponse updateStatus(UUID id, TicketStatusUpdateRequest request, CurrentUser currentUser);
 
-    TicketResponse assignTicket(UUID id, TicketAssignRequest request);
+    TicketResponse assignTicket(UUID id, TicketAssignRequest request, CurrentUser currentUser);
 
     void deleteTicket(UUID id);
 }

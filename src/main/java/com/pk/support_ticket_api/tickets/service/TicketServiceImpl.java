@@ -1,9 +1,13 @@
 package com.pk.support_ticket_api.tickets.service;
 
+import com.pk.support_ticket_api.audit.domain.AuditFieldName;
+import com.pk.support_ticket_api.audit.domain.AuditLog;
+import com.pk.support_ticket_api.audit.repository.AuditLogRepository;
 import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
+import com.pk.support_ticket_api.common.domain.enums.AuditAction;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
@@ -33,6 +37,7 @@ import java.util.UUID;
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
+    private final AuditLogRepository auditLogRepository;
     private final TicketStateMachine stateMachine;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
@@ -61,6 +66,14 @@ public class TicketServiceImpl implements TicketService {
         ticket.setStatus(TicketStatus.OPEN);
 
         Ticket saved = ticketRepository.save(ticket);
+
+        // 記錄 Audit Log
+        auditLogRepository.save(AuditLog.create(
+            createdBy,
+            saved.getId(),
+            AuditAction.TICKET_CREATED
+        ));
+
         return enrichResponse(saved);
     }
 
@@ -101,7 +114,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    public TicketResponse updateTicket(UUID id, UpdateTicketRequest request) {
+    public TicketResponse updateTicket(UUID id, UpdateTicketRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
         if (stateMachine.isFinalState(ticket.getStatus())) {
@@ -122,8 +135,19 @@ public class TicketServiceImpl implements TicketService {
         }
 
         if (request.priority() != null && request.priority() != ticket.getPriority()) {
+            TicketPriority oldPriority = ticket.getPriority();
             ticket.setPriority(request.priority());
             recalculateSlaDeadline(ticket);
+
+            // 記錄 Audit Log
+            auditLogRepository.save(AuditLog.createFieldChange(
+                currentUser.userId(),
+                ticket.getId(),
+                AuditAction.PRIORITY_CHANGED,
+                AuditFieldName.PRIORITY,
+                oldPriority.name(),
+                request.priority().name()
+            ));
         }
 
         Ticket saved = ticketRepository.save(ticket);
@@ -146,15 +170,27 @@ public class TicketServiceImpl implements TicketService {
             ));
         }
 
+        TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(request.status());
         handleStatusSideEffects(ticket, request.status());
+
+        // 記錄 Audit Log
+        AuditLog audit = AuditLog.createFieldChange(
+            currentUser.userId(),
+            ticket.getId(),
+            AuditAction.STATUS_CHANGED,
+            AuditFieldName.STATUS,
+            oldStatus.name(),
+            request.status().name()
+        );
+        auditLogRepository.save(audit);
 
         Ticket saved = ticketRepository.save(ticket);
         return enrichResponse(saved);
     }
 
     @Override
-    public TicketResponse assignTicket(UUID id, TicketAssignRequest request) {
+    public TicketResponse assignTicket(UUID id, TicketAssignRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
         if (stateMachine.isFinalState(ticket.getStatus())) {
@@ -165,7 +201,26 @@ public class TicketServiceImpl implements TicketService {
             validateUserExists(request.assigneeId());
         }
 
+        UUID oldAssigneeId = ticket.getAssignedTo();
         ticket.setAssignedTo(request.assigneeId());
+
+        // 記錄 Audit Log
+        if (request.assigneeId() != null) {
+            auditLogRepository.save(AuditLog.createFieldChange(
+                currentUser.userId(),
+                ticket.getId(),
+                AuditAction.ASSIGNED,
+                AuditFieldName.ASSIGNEE,
+                oldAssigneeId != null ? oldAssigneeId.toString() : null,
+                request.assigneeId().toString()
+            ));
+        } else if (oldAssigneeId != null) {
+            auditLogRepository.save(AuditLog.create(
+                currentUser.userId(),
+                ticket.getId(),
+                AuditAction.UNASSIGNED
+            ));
+        }
 
         Ticket saved = ticketRepository.save(ticket);
         return enrichResponse(saved);

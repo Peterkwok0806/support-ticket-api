@@ -1,5 +1,7 @@
 package com.pk.support_ticket_api.comments.service;
 
+import com.pk.support_ticket_api.audit.domain.AuditLog;
+import com.pk.support_ticket_api.audit.repository.AuditLogRepository;
 import com.pk.support_ticket_api.comments.domain.Comment;
 import com.pk.support_ticket_api.comments.dto.CommentResponse;
 import com.pk.support_ticket_api.comments.dto.CreateCommentRequest;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
+    private final AuditLogRepository auditLogRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
 
@@ -53,6 +56,14 @@ public class CommentServiceImpl implements CommentService {
         comment.setInternal(isInternal);
 
         Comment saved = commentRepository.save(comment);
+
+        // 記錄 Audit Log
+        auditLogRepository.save(AuditLog.createCommentAdded(
+            currentUser.userId(),
+            ticketId,
+            isInternal
+        ));
+
         return enrichResponse(saved);
     }
 

@@ -1,5 +1,6 @@
 package com.pk.support_ticket_api.comments.service;
 
+import com.pk.support_ticket_api.audit.repository.AuditLogRepository;
 import com.pk.support_ticket_api.comments.domain.Comment;
 import com.pk.support_ticket_api.comments.dto.CommentResponse;
 import com.pk.support_ticket_api.comments.dto.CreateCommentRequest;
@@ -39,6 +40,9 @@ class CommentServiceTest {
 
     @Mock
     private CommentRepository commentRepository;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @Mock
     private TicketRepository ticketRepository;
