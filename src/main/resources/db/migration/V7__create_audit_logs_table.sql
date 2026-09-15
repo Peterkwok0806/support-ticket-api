@@ -16,7 +16,8 @@ CREATE TABLE audit_logs (
     old_value       VARCHAR(500),
     new_value       VARCHAR(500),
     internal        BOOLEAN,
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT now()
 );
 
 -- 註解

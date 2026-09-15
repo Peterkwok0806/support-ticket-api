@@ -53,10 +53,16 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 允許匿名存取的端點
                 .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/api/v1/auth/login").permitAll()
-                .requestMatchers("/api/v1/notifications/**").permitAll()
+                // Swagger UI / OpenAPI
+                .requestMatchers("/swagger-ui.html").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-resources/**").permitAll()
+                // API 端點
+                .requestMatchers("/v1/auth/login").permitAll()
+                .requestMatchers("/v1/notifications/**").permitAll()
                 // Admin 端點需要 ADMIN 角色
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/v1/admin/**").hasRole("ADMIN")
                 // 其他所有端點需要已登入
                 .anyRequest().authenticated()
             );

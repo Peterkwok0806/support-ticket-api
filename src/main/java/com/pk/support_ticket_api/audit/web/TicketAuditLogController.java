@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/tickets/{ticketId}/audit-logs")
+@RequestMapping("/v1/tickets/{ticketId}/audit-logs")
 @RequiredArgsConstructor
 @Tag(name = "Audit Logs", description = "稽核日誌 API")
 public class TicketAuditLogController {

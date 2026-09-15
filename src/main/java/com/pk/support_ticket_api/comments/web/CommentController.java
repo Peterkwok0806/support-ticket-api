@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/tickets/{ticketId}/comments")
+@RequestMapping("/v1/tickets/{ticketId}/comments")
 @RequiredArgsConstructor
 @Tag(name = "Comments", description = "工單留言 API")
 public class CommentController {

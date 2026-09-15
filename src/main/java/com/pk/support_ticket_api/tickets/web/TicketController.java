@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/tickets")
+@RequestMapping("/v1/tickets")
 @RequiredArgsConstructor
 @Tag(name = "Tickets", description = "工單管理 API")
 public class TicketController {

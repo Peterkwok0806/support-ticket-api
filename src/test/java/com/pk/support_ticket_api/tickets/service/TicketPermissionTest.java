@@ -63,6 +63,9 @@ class TicketPermissionTest {
     @Mock
     private Clock clock;
 
+    @Mock
+    private com.pk.support_ticket_api.audit.repository.AuditLogRepository auditLogRepository;
+
     @InjectMocks
     private TicketServiceImpl ticketService;
 
@@ -92,6 +95,8 @@ class TicketPermissionTest {
 
         when(clock.instant()).thenReturn(Instant.now());
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+
+        when(auditLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Nested

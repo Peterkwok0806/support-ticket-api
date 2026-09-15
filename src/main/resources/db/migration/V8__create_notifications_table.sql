@@ -13,7 +13,8 @@ CREATE TABLE notifications (
     title           VARCHAR(200) NOT NULL,
     message         TEXT         NOT NULL,
     is_read         BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 -- 防止 SLA 通知重複發送
