@@ -79,6 +79,12 @@
         <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
 
+    <!-- Email (MailHog) -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
     <!-- 健康檢查：/actuator/health -->
     <dependency>
         <groupId>org.springframework.boot</groupId>

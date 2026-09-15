@@ -54,6 +54,7 @@ public class SecurityConfig {
                 // 允許匿名存取的端點
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/v1/auth/login").permitAll()
+                .requestMatchers("/api/v1/notifications/**").permitAll()
                 // Admin 端點需要 ADMIN 角色
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // 其他所有端點需要已登入
