@@ -5,7 +5,6 @@ import com.pk.support_ticket_api.common.response.PageResponse;
 import com.pk.support_ticket_api.notifications.domain.Notification;
 import com.pk.support_ticket_api.notifications.domain.NotificationType;
 import com.pk.support_ticket_api.notifications.dto.NotificationResponse;
-import com.pk.support_ticket_api.notifications.dto.NotificationSummaryResponse;
 import com.pk.support_ticket_api.notifications.repository.NotificationRepository;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
 import org.junit.jupiter.api.BeforeEach;
@@ -127,7 +126,7 @@ class NotificationServiceImplTest {
             when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, pageable))
                     .thenReturn(page);
 
-            PageResponse<NotificationSummaryResponse> result =
+            PageResponse<NotificationResponse> result =
                     notificationService.getNotifications(recipientId, pageable, false);
 
             assertThat(result.content()).hasSize(1);
@@ -147,7 +146,7 @@ class NotificationServiceImplTest {
                     .findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(recipientId, pageable))
                     .thenReturn(page);
 
-            PageResponse<NotificationSummaryResponse> result =
+            PageResponse<NotificationResponse> result =
                     notificationService.getNotifications(recipientId, pageable, true);
 
             assertThat(result.content()).hasSize(1);
@@ -164,7 +163,7 @@ class NotificationServiceImplTest {
             when(notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, pageable))
                     .thenReturn(emptyPage);
 
-            PageResponse<NotificationSummaryResponse> result =
+            PageResponse<NotificationResponse> result =
                     notificationService.getNotifications(recipientId, pageable, false);
 
             assertThat(result.content()).isEmpty();

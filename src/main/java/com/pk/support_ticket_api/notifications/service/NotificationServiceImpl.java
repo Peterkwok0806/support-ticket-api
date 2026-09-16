@@ -6,7 +6,6 @@ import com.pk.support_ticket_api.notifications.domain.Notification;
 import com.pk.support_ticket_api.notifications.domain.NotificationType;
 import com.pk.support_ticket_api.notifications.dto.NotificationContent;
 import com.pk.support_ticket_api.notifications.dto.NotificationResponse;
-import com.pk.support_ticket_api.notifications.dto.NotificationSummaryResponse;
 import com.pk.support_ticket_api.notifications.repository.NotificationRepository;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<NotificationSummaryResponse> getNotifications(
+    public PageResponse<NotificationResponse> getNotifications(
             UUID recipientId,
             Pageable pageable,
             boolean unreadOnly
@@ -60,7 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
                     recipientId, pageable);
         }
 
-        return PageResponse.from(page, NotificationSummaryResponse::from);
+        return PageResponse.from(page, NotificationResponse::from);
     }
 
     @Override

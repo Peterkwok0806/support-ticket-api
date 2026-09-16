@@ -3,7 +3,6 @@ package com.pk.support_ticket_api.notifications.service;
 import com.pk.support_ticket_api.common.response.PageResponse;
 import com.pk.support_ticket_api.notifications.domain.NotificationType;
 import com.pk.support_ticket_api.notifications.dto.NotificationResponse;
-import com.pk.support_ticket_api.notifications.dto.NotificationSummaryResponse;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
 import org.springframework.data.domain.Pageable;
 
@@ -23,7 +22,7 @@ public interface NotificationService {
     /**
      * 查詢使用者的通知列表（分頁）
      */
-    PageResponse<NotificationSummaryResponse> getNotifications(
+    PageResponse<NotificationResponse> getNotifications(
             UUID recipientId,
             Pageable pageable,
             boolean unreadOnly

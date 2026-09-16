@@ -3,7 +3,6 @@ package com.pk.support_ticket_api.notifications.web;
 import com.pk.support_ticket_api.common.response.PageResponse;
 import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.notifications.dto.NotificationResponse;
-import com.pk.support_ticket_api.notifications.dto.NotificationSummaryResponse;
 import com.pk.support_ticket_api.notifications.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,7 +22,7 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ResponseEntity<PageResponse<NotificationSummaryResponse>> getNotifications(
+    public ResponseEntity<PageResponse<NotificationResponse>> getNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "false") boolean unreadOnly,
@@ -31,7 +30,7 @@ public class NotificationController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        PageResponse<NotificationSummaryResponse> response =
+        PageResponse<NotificationResponse> response =
                 notificationService.getNotifications(currentUser.userId(), pageable, unreadOnly);
 
         return ResponseEntity.ok(response);
