@@ -25,7 +25,7 @@ public class TicketAdminController {
     @Operation(summary = "刪除工單", description = "刪除指定工單（管理員專用）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "成功刪除"),
-        @ApiResponse(responseCode = "404", description = "工單不存在")
+        @ApiResponse(responseCode = "404", description = "工單不存在", ref = "NotFound")
     })
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         ticketService.deleteTicket(id);

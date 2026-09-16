@@ -32,9 +32,9 @@ public class CommentController {
     @Operation(summary = "新增留言", description = "對指定工單新增留言（公開回覆或內部討論）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "成功建立"),
-        @ApiResponse(responseCode = "400", description = "請求驗證失敗"),
-        @ApiResponse(responseCode = "403", description = "無權限留言或 Customer 嘗試建立內部留言"),
-        @ApiResponse(responseCode = "404", description = "工單不存在")
+        @ApiResponse(responseCode = "400", description = "請求驗證失敗", ref = "BadRequest"),
+        @ApiResponse(responseCode = "403", description = "無權限留言或 Customer 嘗試建立內部留言", ref = "Forbidden"),
+        @ApiResponse(responseCode = "404", description = "工單不存在", ref = "NotFound")
     })
     public ResponseEntity<CommentResponse> create(
             @PathVariable UUID ticketId,
@@ -51,8 +51,8 @@ public class CommentController {
     @Operation(summary = "查詢留言列表", description = "取得指定工單的所有留言（依角色過濾 internal note）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功取得列表"),
-        @ApiResponse(responseCode = "403", description = "無權限存取此工單"),
-        @ApiResponse(responseCode = "404", description = "工單不存在")
+        @ApiResponse(responseCode = "403", description = "無權限存取此工單", ref = "Forbidden"),
+        @ApiResponse(responseCode = "404", description = "工單不存在", ref = "NotFound")
     })
     public ResponseEntity<List<CommentResponse>> findAll(
             @PathVariable UUID ticketId,
@@ -68,8 +68,8 @@ public class CommentController {
     @Operation(summary = "查詢單一留言", description = "取得指定工單的單一留言")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功取得"),
-        @ApiResponse(responseCode = "403", description = "無權限讀取內部留言"),
-        @ApiResponse(responseCode = "404", description = "工單或留言不存在")
+        @ApiResponse(responseCode = "403", description = "無權限讀取內部留言", ref = "Forbidden"),
+        @ApiResponse(responseCode = "404", description = "工單或留言不存在", ref = "NotFound")
     })
     public ResponseEntity<CommentResponse> getById(
             @PathVariable UUID ticketId,

@@ -37,8 +37,8 @@ public class TicketController {
     @Operation(summary = "建立工單", description = "建立新的支援工單")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "成功建立"),
-        @ApiResponse(responseCode = "400", description = "請求驗證失敗"),
-        @ApiResponse(responseCode = "404", description = "分類不存在")
+        @ApiResponse(responseCode = "400", description = "請求驗證失敗", ref = "BadRequest"),
+        @ApiResponse(responseCode = "404", description = "分類不存在", ref = "NotFound")
     })
     public ResponseEntity<TicketResponse> create(
             @Valid @RequestBody CreateTicketRequest request,
@@ -53,7 +53,7 @@ public class TicketController {
     @Operation(summary = "取得工單詳情", description = "依 ID 取得工單完整資訊")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功取得"),
-        @ApiResponse(responseCode = "404", description = "工單不存在")
+        @ApiResponse(responseCode = "404", description = "工單不存在", ref = "NotFound")
     })
     public ResponseEntity<TicketResponse> getById(
             @PathVariable UUID id,
@@ -90,9 +90,9 @@ public class TicketController {
     @Operation(summary = "更新工單", description = "更新工單基本資訊（標題、描述、分類、優先級）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功更新"),
-        @ApiResponse(responseCode = "400", description = "請求驗證失敗"),
-        @ApiResponse(responseCode = "404", description = "工單或分類不存在"),
-        @ApiResponse(responseCode = "409", description = "工單已關閉，無法更新")
+        @ApiResponse(responseCode = "400", description = "請求驗證失敗", ref = "BadRequest"),
+        @ApiResponse(responseCode = "404", description = "工單或分類不存在", ref = "NotFound"),
+        @ApiResponse(responseCode = "409", description = "工單已關閉，無法更新", ref = "Conflict")
     })
     public ResponseEntity<TicketResponse> update(
             @PathVariable UUID id,
@@ -108,9 +108,9 @@ public class TicketController {
     @Operation(summary = "變更工單狀態", description = "變更工單狀態（需符合狀態機規則）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功變更"),
-        @ApiResponse(responseCode = "404", description = "工單不存在"),
-        @ApiResponse(responseCode = "403", description = "無權限變更此工單"),
-        @ApiResponse(responseCode = "409", description = "不允許的狀態轉換")
+        @ApiResponse(responseCode = "404", description = "工單不存在", ref = "NotFound"),
+        @ApiResponse(responseCode = "403", description = "無權限變更此工單", ref = "Forbidden"),
+        @ApiResponse(responseCode = "409", description = "不允許的狀態轉換", ref = "Conflict")
     })
     public ResponseEntity<TicketResponse> updateStatus(
             @PathVariable UUID id,
@@ -126,8 +126,8 @@ public class TicketController {
     @Operation(summary = "指派工單", description = "指派工單給客服人員（傳入 null 取消指派）")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "成功指派"),
-        @ApiResponse(responseCode = "404", description = "工單或用戶不存在"),
-        @ApiResponse(responseCode = "409", description = "工單已關閉，無法指派")
+        @ApiResponse(responseCode = "404", description = "工單或用戶不存在", ref = "NotFound"),
+        @ApiResponse(responseCode = "409", description = "工單已關閉，無法指派", ref = "Conflict")
     })
     public ResponseEntity<TicketResponse> assign(
             @PathVariable UUID id,

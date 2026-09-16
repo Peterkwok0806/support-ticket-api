@@ -49,7 +49,7 @@ public class CategoryAdminController {
     @Operation(summary = "取得單一分類", description = "依 ID 取得分類詳細資料")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "成功取得分類"),
-            @ApiResponse(responseCode = "404", description = "分類不存在")
+            @ApiResponse(responseCode = "404", description = "分類不存在", ref = "NotFound")
     })
     public ResponseEntity<CategoryResponse> findById(@PathVariable UUID id) {
         CategoryResponse response = categoryService.getCategoryById(id);
@@ -60,8 +60,8 @@ public class CategoryAdminController {
     @Operation(summary = "建立分類", description = "建立新分類")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "成功建立分類"),
-            @ApiResponse(responseCode = "400", description = "請求資料驗證失敗"),
-            @ApiResponse(responseCode = "409", description = "分類名稱已存在")
+            @ApiResponse(responseCode = "400", description = "請求資料驗證失敗", ref = "BadRequest"),
+            @ApiResponse(responseCode = "409", description = "分類名稱已存在", ref = "Conflict")
     })
     public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CreateCategoryRequest request) {
         CategoryResponse response = categoryService.createCategory(request);
@@ -72,9 +72,9 @@ public class CategoryAdminController {
     @Operation(summary = "更新分類", description = "更新分類資料（含 SLA 設定）")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "成功更新分類"),
-            @ApiResponse(responseCode = "400", description = "請求資料驗證失敗"),
-            @ApiResponse(responseCode = "404", description = "分類不存在"),
-            @ApiResponse(responseCode = "409", description = "分類名稱已存在")
+            @ApiResponse(responseCode = "400", description = "請求資料驗證失敗", ref = "BadRequest"),
+            @ApiResponse(responseCode = "404", description = "分類不存在", ref = "NotFound"),
+            @ApiResponse(responseCode = "409", description = "分類名稱已存在", ref = "Conflict")
     })
     public ResponseEntity<CategoryResponse> update(
             @PathVariable UUID id,
@@ -88,7 +88,7 @@ public class CategoryAdminController {
     @Operation(summary = "停用分類", description = "停用指定分類")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "成功停用分類"),
-            @ApiResponse(responseCode = "404", description = "分類不存在"),
+            @ApiResponse(responseCode = "404", description = "分類不存在", ref = "NotFound"),
             @ApiResponse(responseCode = "422", description = "分類已是停用狀態")
     })
     public ResponseEntity<CategoryResponse> deactivate(@PathVariable UUID id) {
@@ -100,7 +100,7 @@ public class CategoryAdminController {
     @Operation(summary = "啟用分類", description = "啟用指定分類")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "成功啟用分類"),
-            @ApiResponse(responseCode = "404", description = "分類不存在"),
+            @ApiResponse(responseCode = "404", description = "分類不存在", ref = "NotFound"),
             @ApiResponse(responseCode = "422", description = "分類已是啟用狀態")
     })
     public ResponseEntity<CategoryResponse> activate(@PathVariable UUID id) {
