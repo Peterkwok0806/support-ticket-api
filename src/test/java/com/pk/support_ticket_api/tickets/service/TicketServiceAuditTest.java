@@ -266,7 +266,7 @@ class TicketServiceAuditTest {
             Ticket ticket = createTestTicket(ticketId, TicketStatus.OPEN);
             CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
 
-            TicketAssignRequest request = new TicketAssignRequest(newAgentId);
+            TicketAssignRequest request = new TicketAssignRequest(newAgentId.toString());
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
             when(userRepository.existsById(newAgentId)).thenReturn(true);

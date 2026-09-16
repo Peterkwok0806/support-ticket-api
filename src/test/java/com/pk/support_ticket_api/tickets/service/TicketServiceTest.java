@@ -262,7 +262,7 @@ class TicketServiceTest {
             when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
             when(userRepository.existsById(assigneeId)).thenReturn(true);
 
-            var request = new com.pk.support_ticket_api.tickets.dto.TicketAssignRequest(assigneeId);
+            var request = new com.pk.support_ticket_api.tickets.dto.TicketAssignRequest(assigneeId.toString());
             ticketService.assignTicket(ticketId, request, adminUser);
 
             verify(ticketRepository).save(argThat(t -> assigneeId.equals(t.getAssignedTo())));

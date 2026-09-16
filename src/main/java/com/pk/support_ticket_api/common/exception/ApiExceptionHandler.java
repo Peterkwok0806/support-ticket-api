@@ -16,7 +16,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.persistence.OptimisticLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 
@@ -213,6 +219,36 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+        MethodArgumentNotValidException ex,
+        HttpServletRequest request
+    ) {
+        List<FieldErrorResponse> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+            .map(error -> new FieldErrorResponse(
+                error.getField(),
+                error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value"
+            ))
+            .toList();
+
+        String message = fieldErrors.isEmpty()
+            ? "Validation failed"
+            : fieldErrors.get(0).message();
+
+        return new ResponseEntity<>(
+            new ErrorResponse(
+                Instant.now(clock),
+                HttpStatus.BAD_REQUEST.value(),
+                "VALIDATION_ERROR",
+                message,
+                request.getRequestURI(),
+                fieldErrors,
+                MDC.get("traceId")
+            ),
+            HttpStatus.BAD_REQUEST
+        );
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(
         DataIntegrityViolationException ex,
@@ -236,6 +272,77 @@ public class ApiExceptionHandler {
             HttpStatus.CONFLICT,
             "OPTIMISTIC_LOCK_CONFLICT",
             "The ticket was updated by another user. Please refresh and try again.",
+            request.getRequestURI(),
+            List.of()
+        );
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handlePropertyReference(
+        PropertyReferenceException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_SORT_PROPERTY",
+            "Invalid sort property: " + ex.getPropertyName(),
+            request.getRequestURI(),
+            List.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDataAccess(
+        InvalidDataAccessApiUsageException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_SORT_EXPRESSION",
+            "Invalid sort expression: " + ex.getMessage().split(":")[0],
+            request.getRequestURI(),
+            List.of()
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+        MethodArgumentTypeMismatchException ex,
+        HttpServletRequest request
+    ) {
+        String message = String.format("Invalid value '%s' for parameter '%s'", ex.getValue(), ex.getName());
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_PARAMETER_TYPE",
+            message,
+            request.getRequestURI(),
+            List.of()
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(
+        MissingServletRequestParameterException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "MISSING_PARAMETER",
+            "Required parameter '" + ex.getParameterName() + "' is missing",
+            request.getRequestURI(),
+            List.of()
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+        IllegalArgumentException ex,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_ARGUMENT",
+            ex.getMessage(),
             request.getRequestURI(),
             List.of()
         );

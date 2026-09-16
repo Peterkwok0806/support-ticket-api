@@ -110,7 +110,7 @@ public class TicketServiceImpl implements TicketService {
             pageable
         );
 
-        return PageResponse.from(page, TicketSummaryResponse::from);
+        return PageResponse.from(page, ticket -> enrichSummaryResponse(ticket));
     }
 
     @Override
@@ -197,22 +197,24 @@ public class TicketServiceImpl implements TicketService {
             throw new ForbiddenOperationException("Cannot assign closed ticket");
         }
 
-        if (request.assigneeId() != null) {
-            validateUserExists(request.assigneeId());
+        UUID assigneeUuid = null;
+        if (request.assigneeId() != null && !request.assigneeId().isBlank()) {
+            assigneeUuid = UUID.fromString(request.assigneeId());
+            validateUserExists(assigneeUuid);
         }
 
         UUID oldAssigneeId = ticket.getAssignedTo();
-        ticket.setAssignedTo(request.assigneeId());
+        ticket.setAssignedTo(assigneeUuid);
 
         // 記錄 Audit Log
-        if (request.assigneeId() != null) {
+        if (assigneeUuid != null) {
             auditLogRepository.save(AuditLog.createFieldChange(
                 currentUser.userId(),
                 ticket.getId(),
                 AuditAction.ASSIGNED,
                 AuditFieldName.ASSIGNEE,
                 oldAssigneeId != null ? oldAssigneeId.toString() : null,
-                request.assigneeId().toString()
+                assigneeUuid.toString()
             ));
         } else if (oldAssigneeId != null) {
             auditLogRepository.save(AuditLog.create(
@@ -307,6 +309,30 @@ public class TicketServiceImpl implements TicketService {
             response.firstResponseAt(),
             response.createdAt(),
             response.updatedAt()
+        );
+    }
+
+    private TicketSummaryResponse enrichSummaryResponse(Ticket ticket) {
+        String categoryName = categoryRepository.findById(ticket.getCategoryId())
+            .map(Category::getName)
+            .orElse(null);
+
+        String assignedToName = null;
+        if (ticket.getAssignedTo() != null) {
+            assignedToName = userRepository.findById(ticket.getAssignedTo())
+                .map(User::getDisplayName)
+                .orElse(null);
+        }
+
+        return new TicketSummaryResponse(
+            ticket.getId(),
+            ticket.getTitle(),
+            ticket.getStatus(),
+            ticket.getPriority(),
+            categoryName,
+            assignedToName,
+            ticket.getSlaDeadline(),
+            ticket.getCreatedAt()
         );
     }
 
