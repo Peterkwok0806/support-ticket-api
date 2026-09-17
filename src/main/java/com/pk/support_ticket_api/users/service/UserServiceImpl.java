@@ -1,5 +1,8 @@
 package com.pk.support_ticket_api.users.service;
 
+import com.pk.support_ticket_api.common.cache.CacheKeys;
+import com.pk.support_ticket_api.common.cache.CacheService;
+import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ConflictException;
@@ -33,6 +36,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final CacheService cacheService;
 
     @Override
     public UserResponse createUser(CreateUserRequest request) {
@@ -71,6 +75,9 @@ public class UserServiceImpl implements UserService {
         }
 
         User saved = userRepository.save(user);
+
+        cacheService.evict(CacheKeys.user(userId.toString()));
+
         return UserResponse.from(saved);
     }
 
@@ -89,6 +96,9 @@ public class UserServiceImpl implements UserService {
 
         user.setStatus(UserStatus.INACTIVE);
         User saved = userRepository.save(user);
+
+        cacheService.evict(CacheKeys.user(userId.toString()));
+
         return UserResponse.from(saved);
     }
 
@@ -97,6 +107,9 @@ public class UserServiceImpl implements UserService {
         User user = findUserById(userId);
         user.setStatus(UserStatus.ACTIVE);
         User saved = userRepository.save(user);
+
+        cacheService.evict(CacheKeys.user(userId.toString()));
+
         return UserResponse.from(saved);
     }
 
@@ -128,6 +141,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponse findById(UUID userId) {
+        return cacheService.get(
+            CacheKeys.user(userId.toString()),
+            UserResponse.class,
+            CacheTtl.USER_PROFILE,
+            () -> loadUserById(userId)
+        );
+    }
+
+    private UserResponse loadUserById(UUID userId) {
         User user = findUserById(userId);
         return UserResponse.from(user);
     }

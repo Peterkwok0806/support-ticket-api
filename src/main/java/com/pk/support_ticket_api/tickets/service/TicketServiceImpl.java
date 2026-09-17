@@ -7,6 +7,9 @@ import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
+import com.pk.support_ticket_api.common.cache.CacheKeys;
+import com.pk.support_ticket_api.common.cache.CacheService;
+import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.domain.enums.AuditAction;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
@@ -43,6 +46,7 @@ public class TicketServiceImpl implements TicketService {
     private final UserRepository userRepository;
     private final SlaCalculator slaCalculator;
     private final Clock clock;
+    private final CacheService cacheService;
 
     @Override
     public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) {
@@ -74,7 +78,11 @@ public class TicketServiceImpl implements TicketService {
             AuditAction.TICKET_CREATED
         ));
 
-        return enrichResponse(saved);
+        TicketResponse response = enrichResponse(saved);
+
+        cacheService.evict(CacheKeys.ticket(saved.getId().toString()));
+
+        return response;
     }
 
     @Override
@@ -86,7 +94,12 @@ public class TicketServiceImpl implements TicketService {
             throw new ForbiddenOperationException("No permission to view this ticket");
         }
 
-        return enrichResponse(ticket);
+        return cacheService.get(
+            CacheKeys.ticket(id.toString()),
+            TicketResponse.class,
+            CacheTtl.TICKET_DETAIL,
+            () -> enrichResponse(ticket)
+        );
     }
 
     @Override
@@ -151,6 +164,9 @@ public class TicketServiceImpl implements TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+
+        cacheService.evict(CacheKeys.ticket(id.toString()));
+
         return enrichResponse(saved);
     }
 
@@ -186,6 +202,9 @@ public class TicketServiceImpl implements TicketService {
         auditLogRepository.save(audit);
 
         Ticket saved = ticketRepository.save(ticket);
+
+        cacheService.evict(CacheKeys.ticket(id.toString()));
+
         return enrichResponse(saved);
     }
 
@@ -225,12 +244,16 @@ public class TicketServiceImpl implements TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+
+        cacheService.evict(CacheKeys.ticket(id.toString()));
+
         return enrichResponse(saved);
     }
 
     @Override
     public void deleteTicket(UUID id) {
         Ticket ticket = findTicketById(id);
+        cacheService.evict(CacheKeys.ticket(id.toString()));
         ticketRepository.delete(ticket);
     }
 
