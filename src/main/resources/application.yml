@@ -48,6 +48,18 @@ spring:
       - ticketById
       - dashboardSummary
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 2000ms
+
 server:
   port: ${SERVER_PORT:8080}
   servlet:
