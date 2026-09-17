@@ -17,7 +17,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,7 +50,16 @@ public class AuditLogServiceImpl implements AuditLogService {
         Page<AuditLog> page = auditLogRepository.findByTicketIdOrderByCreatedAtDesc(
             ticketId, pageable);
 
-        return PageResponse.from(page, this::enrichResponse);
+        // 批次查詢所有演員資訊（避免 N+1 查詢）
+        List<UUID> actorIds = page.getContent().stream()
+            .map(AuditLog::getActorId)
+            .distinct()
+            .toList();
+
+        Map<UUID, User> actorsMap = userRepository.findAllById(actorIds).stream()
+            .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        return PageResponse.from(page, auditLog -> enrichResponse(auditLog, actorsMap));
     }
 
     private boolean hasReadPermission(Ticket ticket, CurrentUser currentUser) {
@@ -59,24 +72,22 @@ public class AuditLogServiceImpl implements AuditLogService {
         };
     }
 
-    private AuditLogResponse enrichResponse(AuditLog auditLog) {
-        AuditLogResponse response = AuditLogResponse.from(auditLog);
-
-        String actorName = userRepository.findById(auditLog.getActorId())
-            .map(User::getDisplayName)
-            .orElse(null);
+    private AuditLogResponse enrichResponse(AuditLog auditLog, Map<UUID, User> actorsMap) {
+        String actorName = actorsMap.get(auditLog.getActorId()) != null
+            ? actorsMap.get(auditLog.getActorId()).getDisplayName()
+            : null;
 
         return new AuditLogResponse(
-            response.id(),
-            response.actorId(),
+            auditLog.getId(),
+            auditLog.getActorId(),
             actorName,
-            response.ticketId(),
-            response.action(),
-            response.fieldName(),
-            response.oldValue(),
-            response.newValue(),
-            response.internal(),
-            response.createdAt()
+            auditLog.getTicketId(),
+            auditLog.getAction(),
+            auditLog.getFieldName(),
+            auditLog.getOldValue(),
+            auditLog.getNewValue(),
+            auditLog.getInternal(),
+            auditLog.getCreatedAt()
         );
     }
 }

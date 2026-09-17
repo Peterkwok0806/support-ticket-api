@@ -29,12 +29,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,7 +90,7 @@ class AuditLogServiceTest {
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
             when(auditLogRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)).thenReturn(page);
-            when(userRepository.findById(customerId)).thenReturn(Optional.of(createUser(customerId)));
+            when(userRepository.findAllById(anyList())).thenReturn(List.of(createUser(customerId)));
 
             // When
             PageResponse<AuditLogResponse> response = auditLogService.getAuditLogsByTicketId(
@@ -125,7 +129,7 @@ class AuditLogServiceTest {
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
             when(auditLogRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)).thenReturn(page);
-            when(userRepository.findById(any())).thenReturn(Optional.of(createUser(agentId)));
+            when(userRepository.findAllById(anyList())).thenReturn(List.of(createUser(agentId)));
 
             // When
             PageResponse<AuditLogResponse> response = auditLogService.getAuditLogsByTicketId(
@@ -162,7 +166,7 @@ class AuditLogServiceTest {
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
             when(auditLogRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)).thenReturn(page);
-            when(userRepository.findById(any())).thenReturn(Optional.of(createUser(adminId)));
+            when(userRepository.findAllById(anyList())).thenReturn(List.of(createUser(adminId)));
 
             // When
             PageResponse<AuditLogResponse> response = auditLogService.getAuditLogsByTicketId(
@@ -209,7 +213,7 @@ class AuditLogServiceTest {
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
             when(auditLogRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)).thenReturn(page);
-            when(userRepository.findById(adminId)).thenReturn(Optional.of(actor));
+            when(userRepository.findAllById(anyList())).thenReturn(List.of(actor));
 
             // When
             PageResponse<AuditLogResponse> response = auditLogService.getAuditLogsByTicketId(
