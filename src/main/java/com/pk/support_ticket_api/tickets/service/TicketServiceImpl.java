@@ -7,9 +7,6 @@ import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
-import com.pk.support_ticket_api.common.cache.CacheKeys;
-import com.pk.support_ticket_api.common.cache.CacheService;
-import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.domain.enums.AuditAction;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
@@ -25,6 +22,8 @@ import com.pk.support_ticket_api.tickets.repository.TicketRepository;
 import com.pk.support_ticket_api.users.domain.User;
 import com.pk.support_ticket_api.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,7 +45,6 @@ public class TicketServiceImpl implements TicketService {
     private final UserRepository userRepository;
     private final SlaCalculator slaCalculator;
     private final Clock clock;
-    private final CacheService cacheService;
 
     @Override
     public TicketResponse createTicket(CreateTicketRequest request, UUID createdBy) {
@@ -71,22 +69,18 @@ public class TicketServiceImpl implements TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        // 記錄 Audit Log
         auditLogRepository.save(AuditLog.create(
             createdBy,
             saved.getId(),
             AuditAction.TICKET_CREATED
         ));
 
-        TicketResponse response = enrichResponse(saved);
-
-        cacheService.evict(CacheKeys.ticket(saved.getId().toString()));
-
-        return response;
+        return enrichResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "tickets", key = "#id")
     public TicketResponse getTicketById(UUID id, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
@@ -94,12 +88,7 @@ public class TicketServiceImpl implements TicketService {
             throw new ForbiddenOperationException("No permission to view this ticket");
         }
 
-        return cacheService.get(
-            CacheKeys.ticket(id.toString()),
-            TicketResponse.class,
-            CacheTtl.TICKET_DETAIL,
-            () -> enrichResponse(ticket)
-        );
+        return enrichResponse(ticket);
     }
 
     @Override
@@ -127,6 +116,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
+    @CacheEvict(value = "tickets", key = "#id")
     public TicketResponse updateTicket(UUID id, UpdateTicketRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
@@ -152,7 +142,6 @@ public class TicketServiceImpl implements TicketService {
             ticket.setPriority(request.priority());
             recalculateSlaDeadline(ticket);
 
-            // 記錄 Audit Log
             auditLogRepository.save(AuditLog.createFieldChange(
                 currentUser.userId(),
                 ticket.getId(),
@@ -164,13 +153,11 @@ public class TicketServiceImpl implements TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
-
-        cacheService.evict(CacheKeys.ticket(id.toString()));
-
         return enrichResponse(saved);
     }
 
     @Override
+    @CacheEvict(value = "tickets", key = "#id")
     public TicketResponse updateStatus(UUID id, TicketStatusUpdateRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
@@ -190,7 +177,6 @@ public class TicketServiceImpl implements TicketService {
         ticket.setStatus(request.status());
         handleStatusSideEffects(ticket, request.status());
 
-        // 記錄 Audit Log
         AuditLog audit = AuditLog.createFieldChange(
             currentUser.userId(),
             ticket.getId(),
@@ -202,13 +188,11 @@ public class TicketServiceImpl implements TicketService {
         auditLogRepository.save(audit);
 
         Ticket saved = ticketRepository.save(ticket);
-
-        cacheService.evict(CacheKeys.ticket(id.toString()));
-
         return enrichResponse(saved);
     }
 
     @Override
+    @CacheEvict(value = "tickets", key = "#id")
     public TicketResponse assignTicket(UUID id, TicketAssignRequest request, CurrentUser currentUser) {
         Ticket ticket = findTicketById(id);
 
@@ -225,7 +209,6 @@ public class TicketServiceImpl implements TicketService {
         UUID oldAssigneeId = ticket.getAssignedTo();
         ticket.setAssignedTo(assigneeUuid);
 
-        // 記錄 Audit Log
         if (assigneeUuid != null) {
             auditLogRepository.save(AuditLog.createFieldChange(
                 currentUser.userId(),
@@ -244,16 +227,13 @@ public class TicketServiceImpl implements TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
-
-        cacheService.evict(CacheKeys.ticket(id.toString()));
-
         return enrichResponse(saved);
     }
 
     @Override
+    @CacheEvict(value = "tickets", key = "#id")
     public void deleteTicket(UUID id) {
         Ticket ticket = findTicketById(id);
-        cacheService.evict(CacheKeys.ticket(id.toString()));
         ticketRepository.delete(ticket);
     }
 

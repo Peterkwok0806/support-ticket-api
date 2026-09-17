@@ -7,15 +7,12 @@ import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.dto.CreateCategoryRequest;
 import com.pk.support_ticket_api.categories.dto.UpdateCategoryRequest;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
-import com.pk.support_ticket_api.common.cache.CacheKeys;
-import com.pk.support_ticket_api.common.cache.CacheService;
-import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ConflictException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
 import com.pk.support_ticket_api.common.response.PageResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,14 +21,28 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final CacheService cacheService;
+
+    public CategoryServiceImpl(CategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
+    }
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "'category:active:list'")
+    public PageResponse<CategorySummaryResponse> getActiveCategories(Pageable pageable) {
+        Page<Category> page = categoryRepository.findAll(
+            CategorySpecification.withFilters(true, null),
+            pageable
+        );
+        return PageResponse.from(page, CategorySummaryResponse::from);
+    }
+
+    @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse createCategory(CreateCategoryRequest request) {
         if (categoryRepository.existsByName(request.name())) {
             throw new ConflictException("Category name already exists: " + request.name());
@@ -46,14 +57,11 @@ public class CategoryServiceImpl implements CategoryService {
         category.setSlaHoursUrgent(request.slaHoursUrgent());
 
         Category saved = categoryRepository.save(category);
-
-        // 失效所有分頁的快取（使用 Pattern）
-        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
-
         return CategoryResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse updateCategory(UUID id, UpdateCategoryRequest request) {
         Category category = findCategoryById(id);
 
@@ -82,14 +90,11 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category saved = categoryRepository.save(category);
-
-        // 失效所有分頁的快取（使用 Pattern）
-        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
-
         return CategoryResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse deactivateCategory(UUID id) {
         Category category = findCategoryById(id);
 
@@ -99,14 +104,11 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(false);
         Category saved = categoryRepository.save(category);
-
-        // 失效所有分頁的快取（使用 Pattern）
-        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
-
         return CategoryResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse activateCategory(UUID id) {
         Category category = findCategoryById(id);
 
@@ -116,10 +118,6 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(true);
         Category saved = categoryRepository.save(category);
-
-        // 失效所有分頁的快取（使用 Pattern）
-        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
-
         return CategoryResponse.from(saved);
     }
 
@@ -146,26 +144,6 @@ public class CategoryServiceImpl implements CategoryService {
             page,
             CategoryResponse::from
         );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<CategorySummaryResponse> getActiveCategories(Pageable pageable) {
-        // ✅ 使用動態 Key（包含分頁參數），避免不同頁面錯誤命中同一快取
-        return cacheService.get(
-            CacheKeys.activeCategories(pageable),
-            new ParameterizedTypeReference<PageResponse<CategorySummaryResponse>>() {},
-            CacheTtl.ACTIVE_CATEGORIES,
-            () -> loadActiveCategories(pageable)
-        );
-    }
-
-    private PageResponse<CategorySummaryResponse> loadActiveCategories(Pageable pageable) {
-        Page<Category> page = categoryRepository.findAll(
-            CategorySpecification.withFilters(true, null),
-            pageable
-        );
-        return PageResponse.from(page, CategorySummaryResponse::from);
     }
 
     private Category findCategoryById(UUID id) {

@@ -2,9 +2,9 @@
 
 | 項目 | 內容 |
 |------|------|
-| **文件版本** | v1.1（新增動態 Key 設計原則） |
+| **文件版本** | v2.0（簡化版，使用 Spring @Cacheable） |
 | **建立日期** | 2026-09-17 |
-| **預計工期** | 3-4 天 |
+| **預計工期** | 2-3 天 |
 | **優先順序** | 中高 |
 
 ---
@@ -37,33 +37,12 @@
 
 ### 2.1 快取資料清單
 
-| 資料 | 快取 Key 格式 | TTL | 理由 |
-|------|---------------|-----|------|
-| **Active Categories** | `category:active:list:p{頁}:s{筆數}:{排序}` | 30 分鐘 | 讀多寫少，Admin 很少修改分類 |
+| 資料 | 快取 Key | TTL | 理由 |
+|------|----------|-----|------|
+| **Active Categories** | `category:active:list` | 30 分鐘 | 讀多寫少，Categories 通常不超過一頁 |
 | **Ticket Detail** | `ticket:{id}` | 5 分鐘 | 使用者可能重複查看同一張工單 |
 | **Dashboard Summary** | `dashboard:summary` | 1 分鐘 | 統計查詢較耗時，可接受短暫延遲 |
 | **User Profile** | `user:{id}` | 10 分鐘 | 頻繁讀取（顯示作者名稱） |
-
-### ⚠️ 重要：動態 Key 設計原則
-
-> **帶分頁/篩選參數的查詢，Key 必須動態包含這些參數！**
-
-❌ **錯誤示範**：
-```
-Key: "category:active:list"（固定不變）
-Page 1 (page=0, size=10) → MISS → 載入第1頁 → 快取
-Page 2 (page=1, size=10) → HIT  → 回傳第1頁的錯誤資料！❌
-```
-
-✅ **正確做法**：
-```
-Key: "category:active:list:p0:s10:createdAt_desc"（動態變化）
-Page 1 → Key: "category:active:list:p0:s10:..." → MISS → 載入 → 快取
-Page 2 → Key: "category:active:list:p1:s10:..." → MISS → 載入 → 快取
-```
-
-**失效策略**：
-- 使用 `evictByPattern("category:active:list:*")` 刪除所有分頁的快取
 
 ### 2.2 快取 Key 命名規範
 
@@ -71,7 +50,7 @@ Page 2 → Key: "category:active:list:p1:s10:..." → MISS → 載入 → 快取
 {domain}:{scope}:{identifier}
 
 範例：
-- category:active:list          # Active 分類列表
+- category:active:list          # Active 分類列表（固定 Key，Categories 不分頁）
 - ticket:550e8400-e29b-41d4    # 特定工單詳情
 - dashboard:summary             # 儀表板摘要
 - user:123e4567-e89b-12d3       # 特定使用者資料
@@ -79,53 +58,52 @@ Page 2 → Key: "category:active:list:p1:s10:..." → MISS → 載入 → 快取
 
 ### 2.3 Cache-Aside 模式
 
-採用 **Cache-Aside**（Lazy Loading）策略：
+採用 **Cache-Aside**（Lazy Loading）策略，使用 Spring `@Cacheable` 註解簡化實作：
 
 ```
 查詢流程：
-1. 先查 Redis 快取
+1. 先查 Redis 快取（@Cacheable）
 2. 快取命中 → 直接回傳
-3. 快取未命中 → 查資料庫 → 寫入快取 → 回傳
+3. 快取未命中 → 查資料庫 → 自動寫入快取 → 回傳
 
 更新流程：
 1. 更新資料庫
-2. 刪除快取（或更新快取）
+2. 刪除快取（@CacheEvict）
 ```
 
-**優點**：首次查詢才寫入，節省記憶體；更新時只清理快取，下次查詢自動重建。
+**優點**：使用 Spring 內建功能，程式碼簡潔，無需自訂快取服務。
+
+### 2.4 設計原則
+
+| 項目 | 說明 |
+|------|------|
+| **固定 Key** | Categories 使用固定 Key，不使用分頁參數動態擴展 |
+| **不分頁快取** | Categories 通常不超過一頁，快取分頁結果無意義 |
+| **簡單失效** | 使用 `@CacheEvict` 直接刪除單一 Key |
+| **Spring 原生** | 使用 `@Cacheable`、`@CacheEvict`，不需自訂快取服務 |
 
 ---
 
 ## 3. 功能需求
 
-### 3.1 共用快取服務
-
-**新增檔案**：`common/cache/CacheService.java`
-
-| 方法 | 說明 |
-|------|------|
-| `get(key, type, supplier)` | 取得快取值，不存在時透過 supplier 載入並快取 |
-| `evict(key)` | 刪除單一快取 key |
-| `evictByPattern(pattern)` | 刪除符合 pattern 的所有 key（如 `ticket:*`） |
-
-### 3.2 Category 快取
+### 3.1 Category 快取
 
 | 項目 | 內容 |
 |------|------|
-| **快取 Key** | `category:active:list:p{頁}:s{筆數}:{排序}`（動態） |
+| **快取 Key** | `category:active:list`（固定） |
 | **快取資料** | `Page<CategorySummaryResponse>` |
 | **TTL** | 30 分鐘（1800 秒） |
-| **失效時機** | 建立、更新、刪除 Category 時（使用 Pattern 失效） |
+| **失效時機** | 建立、更新、刪除 Category 時 |
 
-| 方法 | 修改內容 |
-|------|----------|
-| `getActiveCategories()` | 先查快取（動態 Key），無則查 DB 並寫入快取 |
-| `createCategory()` | 建立後 evictByPattern(`category:active:list:*`) |
-| `updateCategory()` | 更新後 evictByPattern(`category:active:list:*`) |
-| `deactivateCategory()` | 停用後 evictByPattern(`category:active:list:*`) |
-| `activateCategory()` | 啟用後 evictByPattern(`category:active:list:*`) |
+| 方法 | 註解 |
+|------|------|
+| `getActiveCategories()` | `@Cacheable("categories")` |
+| `createCategory()` | `@CacheEvict(value = "categories", allEntries = true)` |
+| `updateCategory()` | `@CacheEvict(value = "categories", allEntries = true)` |
+| `deactivateCategory()` | `@CacheEvict(value = "categories", allEntries = true)` |
+| `activateCategory()` | `@CacheEvict(value = "categories", allEntries = true)` |
 
-### 3.3 Ticket Detail 快取
+### 3.2 Ticket Detail 快取
 
 | 項目 | 內容 |
 |------|------|
@@ -134,39 +112,26 @@ Page 2 → Key: "category:active:list:p1:s10:..." → MISS → 載入 → 快取
 | **TTL** | 5 分鐘（300 秒） |
 | **失效時機** | 更新、狀態變更、指派、留言、新增附件時 |
 
-| 方法 | 修改內容 |
-|------|----------|
-| `getTicketById()` | 先查快取，無則查 DB 並寫入快取 |
-| `createTicket()` | 建立後 evict `ticket:{id}` |
-| `updateTicket()` | 更新後 evict `ticket:{id}` |
-| `updateStatus()` | 狀態變更後 evict `ticket:{id}` |
-| `assignTicket()` | 指派後 evict `ticket:{id}` |
+| 方法 | 註解 |
+|------|------|
+| `getTicketById()` | `@Cacheable(cacheNames = "tickets", key = "#ticketId")` |
+| `createTicket()` | `@CacheEvict(cacheNames = "tickets", key = "#result.id")` |
+| `updateTicket()` | `@CacheEvict(cacheNames = "tickets", key = "#ticketId")` |
+| `updateStatus()` | `@CacheEvict(cacheNames = "tickets", key = "#ticketId")` |
+| `assignTicket()` | `@CacheEvict(cacheNames = "tickets", key = "#ticketId")` |
 
 **注意**：搜尋列表（`getTickets`）**不**使用快取，因為篩選條件多樣，難以有效快取。
 
-### 3.4 Dashboard Summary 快取
+### 3.3 Dashboard Summary 快取
 
 | 項目 | 內容 |
 |------|------|
 | **快取 Key** | `dashboard:summary` |
 | **快取資料** | Dashboard 統計聚合結果 |
 | **TTL** | 1 分鐘（60 秒） |
-| **失效時機** | Ticket 建立、更新狀態時（可選：僅在被引用時被動失效） |
+| **失效時機** | Ticket 建立、更新狀態時（被動失效） |
 
-**Dashboard 統計內容**：
-
-```java
-public record DashboardSummary(
-    long openCount,          // Open 狀態工單數
-    long inProgressCount,    // In Progress 狀態工單數
-    long overdueCount,       // 逾期工單數
-    long resolvedTodayCount, // 今日已解決工單數
-    Map<TicketPriority, Long> byPriority,   // 按優先級分組
-    Map<String, Long> byCategory            // 按分類分組
-)
-```
-
-### 3.5 User Profile 快取
+### 3.4 User Profile 快取
 
 | 項目 | 內容 |
 |------|------|
@@ -174,11 +139,6 @@ public record DashboardSummary(
 | **快取資料** | `UserResponse` |
 | **TTL** | 10 分鐘（600 秒） |
 | **失效時機** | 更新使用者資料時 |
-
-| 方法 | 修改內容 |
-|------|----------|
-| `findById()` | 先查快取，無則查 DB 並寫入快取 |
-| `updateUser()` | 更新後 evict `user:{userId}` |
 
 ---
 
@@ -192,17 +152,7 @@ public record DashboardSummary(
 | 快取命中率（預期） | > 70% |
 | Redis 連線池 | 預設 8 個連線 |
 
-### 4.2 可觀測性
-
-**日誌記錄**（可選開關）：
-
-```
-[CACHE] HIT   key=category:active:list
-[CACHE] MISS  key=ticket:550e8400
-[CACHE] EVICT key=category:active:list reason=update
-```
-
-### 4.3 錯誤處理
+### 4.2 錯誤處理
 
 | 情境 | 處理方式 |
 |------|----------|
@@ -216,26 +166,31 @@ public record DashboardSummary(
 
 ### 5.1 專案結構變更
 
+使用 Spring 原生快取，只需新增/修改以下檔案：
+
 ```
 src/main/java/com/pk/support_ticket_api/
 ├── common/
-│   ├── cache/                          # [新增]
-│   │   ├── CacheService.java           # 共用快取服務
-│   │   └── CacheKeys.java              # Key 常數定義
 │   └── config/
-│       └── RedisConfig.java            # [新增] Redis 設定
+│       └── CacheConfig.java            # [修改] 快取設定
+├── categories/service/
+│   └── CategoryServiceImpl.java        # [修改] 整合 @Cacheable
+├── tickets/service/
+│   └── TicketServiceImpl.java          # [修改] 整合 @Cacheable
+├── users/service/
+│   └── UserServiceImpl.java            # [修改] 整合 @Cacheable
+└── dashboard/
+    └── DashboardService.java            # [修改] 整合 @Cacheable
 ```
 
-### 5.2 快取服務介面
+### 5.2 刪除的檔案
 
-```java
-public interface CacheService {
-    <T> T get(String key, Class<T> type, Supplier<T> loader);
-    <T> T get(String key, ParameterizedTypeReference<T> type, Supplier<T> loader);
-    void evict(String key);
-    void evictByPattern(String pattern);
-}
-```
+以下自訂快取服務檔案將被刪除：
+
+- `common/cache/CacheService.java`
+- `common/cache/CacheServiceImpl.java`
+- `common/cache/CacheKeys.java`
+- `common/cache/CacheTtl.java`
 
 ### 5.3 Redis 設定
 
@@ -251,6 +206,39 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000  # 預設 10 分鐘，可依快取調整
+```
+
+### 5.4 CacheConfig.java
+
+```java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+    
+    @Bean
+    public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .serializeValuesWith(RedisSerializationContext.SerializationPair
+                .fromSerializer(new GenericJackson2JsonRedisSerializer()))
+            .entryTtl(Duration.ofMinutes(10));
+
+        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
+            "categories", defaultConfig.entryTtl(Duration.ofMinutes(30)),
+            "tickets", defaultConfig.entryTtl(Duration.ofMinutes(5)),
+            "users", defaultConfig.entryTtl(Duration.ofMinutes(10)),
+            "dashboard", defaultConfig.entryTtl(Duration.ofMinutes(1))
+        );
+
+        return RedisCacheManager.builder(factory)
+            .cacheDefaults(defaultConfig)
+            .withInitialCacheConfigurations(cacheConfigs)
+            .build();
+    }
+}
 ```
 
 ---
@@ -259,11 +247,13 @@ spring:
 
 ### 6.1 單元測試
 
+使用 Mockito 測試快取行為（不測試 Redis 本身）：
+
 | 測試案例 | 驗證內容 |
 |----------|----------|
-| CacheService hit | 快取存在時不回呼 loader |
-| CacheService miss | 快取不存在時呼叫 loader 並寫入快取 |
-| CacheService evict | 刪除後下次查詢重新載入 |
+| @Cacheable hit | 快取存在時不回呼 loader |
+| @Cacheable miss | 快取不存在時呼叫 loader 並寫入快取 |
+| @CacheEvict | 刪除後下次查詢重新載入 |
 | Evict on update | Category 更新後快取被清除 |
 
 ### 6.2 整合測試
@@ -272,56 +262,42 @@ spring:
 
 ```java
 @Testcontainers
-class CacheServiceIntegrationTest {
+class CacheIntegrationTest {
     @Container
     static RedisContainer<?> redis = new RedisContainer<>("redis:7");
 }
 ```
 
-| 測試案例 | 驗證內容 |
-|----------|----------|
-| TTL 正確 | 資料在 TTL 後自動消失 |
-| 快取隔離 | 不同 key 的資料互不影響 |
-| 並發安全 | 多執行緒同時寫入不會損壞資料 |
-
 ---
 
 ## 7. 實作計畫
 
-### 7.1 Day 1：基礎設施
+### 7.1 Day 1：基礎設施 + Category 快取
 
 | 任務 | 預估工時 |
 |------|----------|
-| 新增 Redis 設定（RedisConfig.java） | 1h |
-| 實作 CacheService 介面與實作 | 2h |
-| 定義 CacheKeys 常數類別 | 1h |
-| 單元測試 | 2h |
+| 修改 CacheConfig.java（TTL 設定） | 1h |
+| CategoryServiceImpl 改用 @Cacheable | 2h |
+| CategoryServiceTest 更新 | 1h |
+| 刪除自訂快取服務檔案 | 0.5h |
 
-### 7.2 Day 2：Category + User 快取
-
-| 任務 | 預估工時 |
-|------|----------|
-| CategoryService 整合快取 | 2h |
-| UserService 整合快取 | 2h |
-| 快取失效邏輯 | 1h |
-| 單元測試 + 整合測試 | 3h |
-
-### 7.3 Day 3：Ticket + Dashboard 快取
+### 7.2 Day 2：Ticket + User + Dashboard 快取
 
 | 任務 | 預估工時 |
 |------|----------|
-| TicketService 整合快取 | 3h |
-| Dashboard 統計 + 快取 | 2h |
-| 單元測試 + 整合測試 | 3h |
+| TicketServiceImpl 改用 @Cacheable | 2h |
+| UserServiceImpl 改用 @Cacheable | 1h |
+| DashboardService 改用 @Cacheable | 1h |
+| 單元測試更新 | 2h |
+| 整合測試 | 2h |
 
-### 7.4 Day 4：測試與文件
+### 7.3 Day 3：測試與驗證
 
 | 任務 | 預估工時 |
 |------|----------|
 | 完整整合測試 | 3h |
 | 更新 API 文件（Swagger） | 1h |
-| 更新 README / 操作手冊 | 1h |
-| 效能驗證 | 3h |
+| 效能驗證 | 2h |
 
 ---
 
@@ -329,16 +305,17 @@ class CacheServiceIntegrationTest {
 
 | 檔案 | 類型 | 說明 |
 |------|------|------|
-| `common/config/RedisConfig.java` | 新增 | Redis 連線設定 |
-| `common/cache/CacheService.java` | 新增 | 快取服務介面 |
-| `common/cache/CacheServiceImpl.java` | 新增 | 快取服務實作 |
-| `common/cache/CacheKeys.java` | 新增 | Key 常數定義 |
-| `categories/service/CategoryServiceImpl.java` | 修改 | 整合快取 |
-| `users/service/UserServiceImpl.java` | 修改 | 整合快取 |
-| `tickets/service/TicketServiceImpl.java` | 修改 | 整合快取 |
-| `tickets/service/DashboardService.java` | 新增 | Dashboard 統計服務 |
-| `*CacheServiceTest.java` | 新增 | 單元測試 |
-| `*CacheServiceIntegrationTest.java` | 新增 | 整合測試 |
+| `common/config/CacheConfig.java` | 修改 | 快取 TTL 設定 |
+| `categories/service/CategoryServiceImpl.java` | 修改 | 使用 @Cacheable/@CacheEvict |
+| `tickets/service/TicketServiceImpl.java` | 修改 | 使用 @Cacheable/@CacheEvict |
+| `users/service/UserServiceImpl.java` | 修改 | 使用 @Cacheable/@CacheEvict |
+| `dashboard/DashboardService.java` | 修改 | 使用 @Cacheable/@CacheEvict |
+
+**刪除檔案**：
+- `common/cache/CacheService.java`
+- `common/cache/CacheServiceImpl.java`
+- `common/cache/CacheKeys.java`
+- `common/cache/CacheTtl.java`
 
 ---
 
@@ -348,34 +325,11 @@ class CacheServiceIntegrationTest {
 |------|--------|------|----------|
 | Redis 不可用時影響效能 | 低 | 高 | 實作降級機制，直接查 DB |
 | 快取與資料庫不一致 | 中 | 中 | 寫入時主動失效快取 |
-| 快取 key 命名衝突 | 低 | 高 | 統一使用 CacheKeys 常數類別 |
 | TTL 設定不合理 | 中 | 中 | 先用保守值，後續依監控調整 |
 
 ---
 
-## 10. 替代方案考量
-
-### 10.1 Write-Through vs Cache-Aside
-
-| 方案 | 優點 | 缺點 |
-|------|------|------|
-| **Cache-Aside（選用）** | 簡單、記憶體效率高 | 首次查詢有兩個步驟 |
-| Write-Through | 寫入時同步更新快取 | 記憶體佔用較高、寫入延遲 |
-
-**結論**：採用 Cache-Aside，適合讀多寫少的場景。
-
-### 10.2 快取過期策略
-
-| 策略 | 適用場景 |
-|------|----------|
-| **TTL 過期（選用）** | Dashboard、User Profile |
-| 主動失效 | Category、Ticket（寫入時清除） |
-
-**結論**：Dashboard 單純用 TTL；其他資料寫入時主動失效 + TTL 兜底。
-
----
-
-## 11. 驗收標準
+## 10. 驗收標準
 
 | # | 標準 | 驗證方式 |
 |---|------|----------|
@@ -387,24 +341,23 @@ class CacheServiceIntegrationTest {
 | 6 | Dashboard 統計結果會被快取 | 第二次查詢不產生 SQL |
 | 7 | Redis 不可用時系統仍正常運作 | 模擬 Redis 關閉 |
 | 8 | 所有單元測試通過 | `./mvnw test` |
-| 9 | API 文件更新 | Swagger 可見快取相關資訊 |
 
 ---
 
-## 12. 附錄
+## 11. 附錄
 
 ### A. 參考資源
 
+- [Spring Cache 文件](https://docs.spring.io/spring-framework/reference/integration/cache.html)
 - [Spring Data Redis 文件](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/)
 - [Cache-Aside Pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside)
-- [Redis Best Practices](https://redis.io/docs/manual/patterns/)
 
 ### B. 術語表
 
 | 術語 | 說明 |
 |------|------|
+| @Cacheable | Spring 註解，標記方法結果可被快取 |
+| @CacheEvict | Spring 註解，標記方法執行後清除快取 |
 | Cache-Aside | 一種快取模式，先查快取，未命中再查 DB 並寫入快取 |
 | TTL | Time To Live，快取存活的時間 |
 | Evict | 刪除快取 |
-| Cache Hit | 快取命中，直接從快取取得資料 |
-| Cache Miss | 快取未命中，需要從 DB 載入 |

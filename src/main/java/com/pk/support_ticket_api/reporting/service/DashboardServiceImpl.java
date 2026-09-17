@@ -1,16 +1,13 @@
 package com.pk.support_ticket_api.reporting.service;
 
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
-import com.pk.support_ticket_api.common.cache.CacheKeys;
-import com.pk.support_ticket_api.common.cache.CacheService;
-import com.pk.support_ticket_api.common.cache.CacheTtl;
-import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.reporting.dto.DashboardSummaryResponse;
 import com.pk.support_ticket_api.tickets.domain.Ticket;
 import com.pk.support_ticket_api.tickets.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +26,13 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final TicketRepository ticketRepository;
     private final CategoryRepository categoryRepository;
-    private final CacheService cacheService;
 
     @Override
+    @Cacheable(value = "dashboard", key = "'dashboard:summary'")
     public DashboardSummaryResponse getSummary(UUID currentUserId) {
-        return cacheService.get(
-            CacheKeys.DASHBOARD_SUMMARY,
-            DashboardSummaryResponse.class,
-            CacheTtl.DASHBOARD_SUMMARY,
-            this::loadSummary
-        );
+        return loadSummary();
     }
 
-    /**
-     * 載入 Dashboard 統計（當快取未命中時呼叫）
-     * 計算 Open、In Progress、Overdue、Resolved Today 的數量
-     * 以及按 Priority 和 Category 的分組統計
-     */
     private DashboardSummaryResponse loadSummary() {
         Instant now = Instant.now();
         LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);

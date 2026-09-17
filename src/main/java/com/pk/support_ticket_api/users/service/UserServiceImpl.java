@@ -1,8 +1,5 @@
 package com.pk.support_ticket_api.users.service;
 
-import com.pk.support_ticket_api.common.cache.CacheKeys;
-import com.pk.support_ticket_api.common.cache.CacheService;
-import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ConflictException;
@@ -17,6 +14,8 @@ import com.pk.support_ticket_api.users.dto.UpdateUserRequest;
 import com.pk.support_ticket_api.users.dto.UserResponse;
 import com.pk.support_ticket_api.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -36,7 +35,6 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
-    private final CacheService cacheService;
 
     @Override
     public UserResponse createUser(CreateUserRequest request) {
@@ -56,6 +54,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "users", key = "#userId")
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         User user = findUserById(userId);
 
@@ -75,13 +74,11 @@ public class UserServiceImpl implements UserService {
         }
 
         User saved = userRepository.save(user);
-
-        cacheService.evict(CacheKeys.user(userId.toString()));
-
         return UserResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "users", key = "#userId")
     public UserResponse deactivate(UUID userId) {
         User user = findUserById(userId);
         UUID currentUserId = getCurrentUserIdOrThrow();
@@ -96,24 +93,20 @@ public class UserServiceImpl implements UserService {
 
         user.setStatus(UserStatus.INACTIVE);
         User saved = userRepository.save(user);
-
-        cacheService.evict(CacheKeys.user(userId.toString()));
-
         return UserResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "users", key = "#userId")
     public UserResponse activate(UUID userId) {
         User user = findUserById(userId);
         user.setStatus(UserStatus.ACTIVE);
         User saved = userRepository.save(user);
-
-        cacheService.evict(CacheKeys.user(userId.toString()));
-
         return UserResponse.from(saved);
     }
 
     @Override
+    @CacheEvict(value = "users", key = "#userId")
     public void delete(UUID userId) {
         User user = findUserById(userId);
         UUID currentUserId = getCurrentUserIdOrThrow();
@@ -140,16 +133,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "users", key = "#userId")
     public UserResponse findById(UUID userId) {
-        return cacheService.get(
-            CacheKeys.user(userId.toString()),
-            UserResponse.class,
-            CacheTtl.USER_PROFILE,
-            () -> loadUserById(userId)
-        );
-    }
-
-    private UserResponse loadUserById(UUID userId) {
         User user = findUserById(userId);
         return UserResponse.from(user);
     }
