@@ -67,7 +67,7 @@ class JwtServiceTest {
             CurrentUser parsed = service.parseToken(token);
             assertEquals(testUser.getId(), parsed.userId());
             assertEquals(testUser.getEmail(), parsed.email());
-            assertEquals(testUser.getRole().name(), parsed.role());
+            assertEquals(testUser.getRole(), parsed.role());
         }
 
         @Test
@@ -158,7 +158,7 @@ class JwtServiceTest {
 
             assertEquals(testUser.getId(), currentUser.userId());
             assertEquals(testUser.getEmail(), currentUser.email());
-            assertEquals(testUser.getRole().name(), currentUser.role());
+            assertEquals(testUser.getRole(), currentUser.role());
         }
 
         @Test
@@ -171,7 +171,7 @@ class JwtServiceTest {
                 String token = service.generateToken(user);
 
                 CurrentUser currentUser = service.parseToken(token);
-                assertEquals(role.name(), currentUser.role(), "Role " + role + " 解析失敗");
+                assertEquals(role, currentUser.role(), "Role " + role + " 解析失敗");
             }
         }
     }

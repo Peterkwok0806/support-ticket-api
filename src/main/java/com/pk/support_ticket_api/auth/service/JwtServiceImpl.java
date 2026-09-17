@@ -2,6 +2,7 @@ package com.pk.support_ticket_api.auth.service;
 
 import com.pk.support_ticket_api.auth.exception.InvalidTokenException;
 import com.pk.support_ticket_api.auth.exception.TokenExpiredException;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.security.CurrentUser;
 import com.pk.support_ticket_api.users.domain.User;
 import io.jsonwebtoken.Claims;
@@ -79,7 +80,7 @@ public class JwtServiceImpl implements JwtService {
             throw new InvalidTokenException("Token subject is not a valid UUID");
         }
 
-        return new CurrentUser(userId, email, role);
+        return new CurrentUser(userId, email, Role.valueOf(role));
     }
 
     @Override

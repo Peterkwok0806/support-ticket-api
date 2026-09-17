@@ -30,6 +30,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.List;
+import com.pk.support_ticket_api.common.domain.enums.Role;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -83,7 +86,7 @@ class AuditLogServiceTest {
         @DisplayName("Customer 查詢自己建立的 Ticket 應成功")
         void customerCanQueryOwnTicket() {
             // Given
-            CurrentUser customer = new CurrentUser(customerId, "customer@test.com", "CUSTOMER");
+            CurrentUser customer = new CurrentUser(customerId, "customer@test.com", Role.CUSTOMER);
             Pageable pageable = PageRequest.of(0, 20);
             AuditLog auditLog = createAuditLog(AuditAction.TICKET_CREATED);
             Page<AuditLog> page = new PageImpl<>(List.of(auditLog));
@@ -105,7 +108,7 @@ class AuditLogServiceTest {
         @DisplayName("Customer 查詢他人 Ticket 應拋出 ForbiddenOperationException")
         void customerCannotQueryOthersTicket() {
             // Given
-            CurrentUser customer = new CurrentUser(UUID.randomUUID(), "other@test.com", "CUSTOMER");
+            CurrentUser customer = new CurrentUser(UUID.randomUUID(), "other@test.com", Role.CUSTOMER);
             Pageable pageable = PageRequest.of(0, 20);
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
@@ -121,7 +124,7 @@ class AuditLogServiceTest {
         void agentCanQueryAssignedTicket() {
             // Given
             testTicket.setAssignedTo(agentId);
-            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", "AGENT");
+            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
             Pageable pageable = PageRequest.of(0, 20);
             AuditLog auditLog = createAuditLog(AuditAction.STATUS_CHANGED);
             ReflectionTestUtils.setField(auditLog, "actorId", agentId);
@@ -144,7 +147,7 @@ class AuditLogServiceTest {
         void agentCannotQueryUnassignedTicket() {
             // Given
             testTicket.setAssignedTo(UUID.randomUUID());  // 指派給別人
-            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", "AGENT");
+            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
             Pageable pageable = PageRequest.of(0, 20);
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(testTicket));
@@ -158,7 +161,7 @@ class AuditLogServiceTest {
         @DisplayName("Admin 查詢任何 Ticket 應成功")
         void adminCanQueryAnyTicket() {
             // Given
-            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
             Pageable pageable = PageRequest.of(0, 20);
             AuditLog auditLog = createAuditLog(AuditAction.COMMENT_ADDED);
             ReflectionTestUtils.setField(auditLog, "actorId", adminId);
@@ -181,7 +184,7 @@ class AuditLogServiceTest {
         void ticketNotFoundShouldThrowException() {
             // Given
             UUID nonExistentTicketId = UUID.randomUUID();
-            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
             Pageable pageable = PageRequest.of(0, 20);
 
             when(ticketRepository.findById(nonExistentTicketId)).thenReturn(Optional.empty());
@@ -201,7 +204,7 @@ class AuditLogServiceTest {
         @DisplayName("應正確填充 actorName")
         void shouldEnrichActorName() {
             // Given
-            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
             Pageable pageable = PageRequest.of(0, 20);
 
             AuditLog auditLog = createAuditLog(AuditAction.TICKET_CREATED);

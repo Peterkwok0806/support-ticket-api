@@ -1,5 +1,6 @@
 package com.pk.support_ticket_api.tickets.service;
 
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
@@ -88,10 +89,10 @@ class TicketPermissionTest {
         otherAgentId = UUID.randomUUID();
         adminId = UUID.randomUUID();
 
-        customerUser = new CurrentUser(customerId, "customer@test.com", "CUSTOMER");
-        agentUser = new CurrentUser(agentId, "agent@test.com", "AGENT");
-        otherAgentUser = new CurrentUser(otherAgentId, "other@agent.com", "AGENT");
-        adminUser = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+        customerUser = new CurrentUser(customerId, "customer@test.com", Role.CUSTOMER);
+        agentUser = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
+        otherAgentUser = new CurrentUser(otherAgentId, "other@agent.com", Role.AGENT);
+        adminUser = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
 
         when(clock.instant()).thenReturn(Instant.now());
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());

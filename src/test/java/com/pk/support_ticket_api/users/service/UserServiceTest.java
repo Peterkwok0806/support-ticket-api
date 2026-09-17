@@ -395,7 +395,7 @@ class UserServiceTest {
     }
 
     private void setupSecurityContext(UUID userId) {
-        CurrentUser currentUser = new CurrentUser(userId, "admin@example.com", "ADMIN");
+        CurrentUser currentUser = new CurrentUser(userId, "admin@example.com", Role.ADMIN);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 currentUser, null, List.of()
         );

@@ -4,6 +4,7 @@ import com.pk.support_ticket_api.audit.repository.AuditLogRepository;
 import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
@@ -81,8 +82,8 @@ class TicketServiceTest {
         agentId = UUID.randomUUID();
         adminId = UUID.randomUUID();
 
-        adminUser = new CurrentUser(adminId, "admin@test.com", "ADMIN");
-        agentUser = new CurrentUser(agentId, "agent@test.com", "AGENT");
+        adminUser = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
+        agentUser = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
 
         testCategory = new Category();
         ReflectionTestUtils.setField(testCategory, "id", categoryId);

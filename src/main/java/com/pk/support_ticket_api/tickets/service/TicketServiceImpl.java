@@ -8,6 +8,7 @@ import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
 import com.pk.support_ticket_api.common.domain.enums.AuditAction;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
@@ -341,28 +342,26 @@ public class TicketServiceImpl implements TicketService {
 
     private boolean hasReadPermission(Ticket ticket, CurrentUser currentUser) {
         return switch (currentUser.role()) {
-            case "ADMIN" -> true;
-            case "AGENT" -> ticket.getAssignedTo() != null
+            case ADMIN -> true;
+            case AGENT -> ticket.getAssignedTo() != null
                     && ticket.getAssignedTo().equals(currentUser.userId());
-            case "CUSTOMER" -> ticket.getCreatedBy().equals(currentUser.userId());
-            default -> false;
+            case CUSTOMER -> ticket.getCreatedBy().equals(currentUser.userId());
         };
     }
 
     private boolean canChangeStatus(Ticket ticket, CurrentUser currentUser) {
         return switch (currentUser.role()) {
-            case "ADMIN" -> true;
-            case "AGENT" -> ticket.getAssignedTo() != null
+            case ADMIN -> true;
+            case AGENT -> ticket.getAssignedTo() != null
                     && ticket.getAssignedTo().equals(currentUser.userId());
-            case "CUSTOMER" -> false;
-            default -> false;
+            case CUSTOMER -> false;
         };
     }
 
     private TicketFilterRequest applyPermissionFilter(TicketFilterRequest filter, CurrentUser currentUser) {
         return switch (currentUser.role()) {
-            case "ADMIN" -> filter;
-            case "AGENT" -> new TicketFilterRequest(
+            case ADMIN -> filter;
+            case AGENT -> new TicketFilterRequest(
                 filter.statuses(),
                 filter.priority(),
                 filter.categoryId(),
@@ -370,7 +369,7 @@ public class TicketServiceImpl implements TicketService {
                 null,
                 filter.keyword()
             );
-            case "CUSTOMER" -> new TicketFilterRequest(
+            case CUSTOMER -> new TicketFilterRequest(
                 filter.statuses(),
                 filter.priority(),
                 filter.categoryId(),
@@ -378,7 +377,6 @@ public class TicketServiceImpl implements TicketService {
                 currentUser.userId(),
                 filter.keyword()
             );
-            default -> filter;
         };
     }
 }

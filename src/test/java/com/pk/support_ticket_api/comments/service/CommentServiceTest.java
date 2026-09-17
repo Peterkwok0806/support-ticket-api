@@ -5,6 +5,7 @@ import com.pk.support_ticket_api.comments.domain.Comment;
 import com.pk.support_ticket_api.comments.dto.CommentResponse;
 import com.pk.support_ticket_api.comments.dto.CreateCommentRequest;
 import com.pk.support_ticket_api.comments.repository.CommentRepository;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
 import com.pk.support_ticket_api.common.security.CurrentUser;
@@ -73,9 +74,9 @@ class CommentServiceTest {
         adminId = UUID.randomUUID();
         commentId = UUID.randomUUID();
 
-        customerUser = new CurrentUser(customerId, "customer@test.com", "CUSTOMER");
-        agentUser = new CurrentUser(agentId, "agent@test.com", "AGENT");
-        adminUser = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+        customerUser = new CurrentUser(customerId, "customer@test.com", Role.CUSTOMER);
+        agentUser = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
+        adminUser = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
 
         ticket = createTicket(customerId, agentId);
 

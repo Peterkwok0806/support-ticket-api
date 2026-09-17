@@ -6,6 +6,7 @@ import com.pk.support_ticket_api.comments.domain.Comment;
 import com.pk.support_ticket_api.comments.dto.CommentResponse;
 import com.pk.support_ticket_api.comments.dto.CreateCommentRequest;
 import com.pk.support_ticket_api.comments.repository.CommentRepository;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
 import com.pk.support_ticket_api.common.security.CurrentUser;
@@ -44,7 +45,7 @@ public class CommentServiceImpl implements CommentService {
 
         boolean isInternal = Boolean.TRUE.equals(request.internal());
 
-        if (isInternal && "CUSTOMER".equals(currentUser.role())) {
+        if (isInternal && currentUser.role() == Role.CUSTOMER) {
             throw new ForbiddenOperationException(
                 "Customer cannot create internal notes");
         }
@@ -123,29 +124,27 @@ public class CommentServiceImpl implements CommentService {
 
     private void validateTicketAccess(Ticket ticket, CurrentUser currentUser) {
         switch (currentUser.role()) {
-            case "ADMIN" -> {
+            case ADMIN -> {
             }
-            case "AGENT" -> {
+            case AGENT -> {
                 if (ticket.getAssignedTo() == null
                     || !ticket.getAssignedTo().equals(currentUser.userId())) {
                     throw new ForbiddenOperationException(
                         "No permission to access this ticket");
                 }
             }
-            case "CUSTOMER" -> {
+            case CUSTOMER -> {
                 if (!ticket.getCreatedBy().equals(currentUser.userId())) {
                     throw new ForbiddenOperationException(
                         "No permission to access this ticket");
                 }
             }
-            default -> throw new ForbiddenOperationException(
-                "Unknown role: " + currentUser.role());
         }
     }
 
     private boolean canViewInternal(CurrentUser currentUser) {
-        return "ADMIN".equals(currentUser.role())
-            || "AGENT".equals(currentUser.role());
+        return currentUser.role() == Role.ADMIN
+            || currentUser.role() == Role.AGENT;
     }
 
     private CommentResponse enrichResponse(Comment comment) {

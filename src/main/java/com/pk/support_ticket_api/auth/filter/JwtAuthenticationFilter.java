@@ -82,7 +82,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(
                             currentUser,
                             null, // 密碼/憑證在有無狀態 JWT 中設為 null
-                            List.of(new SimpleGrantedAuthority("ROLE_" + currentUser.role())) // 讀取你的 Record 欄位
+                            List.of(new SimpleGrantedAuthority("ROLE_" + currentUser.role().name())) // 讀取你的 Record 欄位
                     );
             
             // 注入當前請求的詳細資訊（例如客戶端 IP、Session ID）

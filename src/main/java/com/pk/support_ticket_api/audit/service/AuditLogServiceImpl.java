@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pk.support_ticket_api.common.domain.enums.Role;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,11 +66,10 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     private boolean hasReadPermission(Ticket ticket, CurrentUser currentUser) {
         return switch (currentUser.role()) {
-            case "ADMIN" -> true;
-            case "AGENT" -> ticket.getAssignedTo() != null
+            case ADMIN -> true;
+            case AGENT -> ticket.getAssignedTo() != null
                     && ticket.getAssignedTo().equals(currentUser.userId());
-            case "CUSTOMER" -> ticket.getCreatedBy().equals(currentUser.userId());
-            default -> false;
+            case CUSTOMER -> ticket.getCreatedBy().equals(currentUser.userId());
         };
     }
 

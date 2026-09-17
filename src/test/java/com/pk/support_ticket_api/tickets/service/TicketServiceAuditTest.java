@@ -7,6 +7,7 @@ import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
 import com.pk.support_ticket_api.categories.service.SlaCalculator;
 import com.pk.support_ticket_api.common.domain.enums.AuditAction;
+import com.pk.support_ticket_api.common.domain.enums.Role;
 import com.pk.support_ticket_api.common.domain.enums.TicketPriority;
 import com.pk.support_ticket_api.common.domain.enums.TicketStatus;
 import com.pk.support_ticket_api.common.exception.ForbiddenOperationException;
@@ -88,8 +89,8 @@ class TicketServiceAuditTest {
         categoryId = UUID.randomUUID();
         adminId = UUID.randomUUID();
 
-        adminUser = new CurrentUser(adminId, "admin@test.com", "ADMIN");
-        agentUser = new CurrentUser(agentId, "agent@test.com", "AGENT");
+        adminUser = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
+        agentUser = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
 
         testCategory = new Category();
         ReflectionTestUtils.setField(testCategory, "id", categoryId);
@@ -173,7 +174,7 @@ class TicketServiceAuditTest {
             UUID ticketId = UUID.randomUUID();
             Ticket ticket = createTestTicket(ticketId, TicketStatus.OPEN);
             ticket.setAssignedTo(agentId);
-            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", "AGENT");
+            CurrentUser agent = new CurrentUser(agentId, "agent@test.com", Role.AGENT);
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.IN_PROGRESS);
 
@@ -203,7 +204,7 @@ class TicketServiceAuditTest {
             // Given
             UUID ticketId = UUID.randomUUID();
             Ticket ticket = createTestTicket(ticketId, TicketStatus.OPEN);
-            CurrentUser customer = new CurrentUser(customerId, "customer@test.com", "CUSTOMER");
+            CurrentUser customer = new CurrentUser(customerId, "customer@test.com", Role.CUSTOMER);
 
             TicketStatusUpdateRequest request = new TicketStatusUpdateRequest(TicketStatus.IN_PROGRESS);
 
@@ -264,7 +265,7 @@ class TicketServiceAuditTest {
             UUID ticketId = UUID.randomUUID();
             UUID newAgentId = UUID.randomUUID();
             Ticket ticket = createTestTicket(ticketId, TicketStatus.OPEN);
-            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
 
             TicketAssignRequest request = new TicketAssignRequest(newAgentId.toString());
 
@@ -296,7 +297,7 @@ class TicketServiceAuditTest {
             Ticket ticket = createTestTicket(ticketId, TicketStatus.OPEN);
             ticket.setAssignedTo(agentId);
 
-            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", "ADMIN");
+            CurrentUser admin = new CurrentUser(adminId, "admin@test.com", Role.ADMIN);
             TicketAssignRequest request = new TicketAssignRequest(null);
 
             when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
