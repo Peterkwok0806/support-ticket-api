@@ -2,7 +2,7 @@
 
 | 項目 | 內容 |
 |------|------|
-| **文件版本** | v1.0 |
+| **文件版本** | v1.1（新增動態 Key 設計原則） |
 | **建立日期** | 2026-09-17 |
 | **預計工期** | 3-4 天 |
 | **優先順序** | 中高 |
@@ -39,10 +39,31 @@
 
 | 資料 | 快取 Key 格式 | TTL | 理由 |
 |------|---------------|-----|------|
-| **Active Categories** | `category:active:list` | 30 分鐘 | 讀多寫少，Admin 很少修改分類 |
+| **Active Categories** | `category:active:list:p{頁}:s{筆數}:{排序}` | 30 分鐘 | 讀多寫少，Admin 很少修改分類 |
 | **Ticket Detail** | `ticket:{id}` | 5 分鐘 | 使用者可能重複查看同一張工單 |
 | **Dashboard Summary** | `dashboard:summary` | 1 分鐘 | 統計查詢較耗時，可接受短暫延遲 |
 | **User Profile** | `user:{id}` | 10 分鐘 | 頻繁讀取（顯示作者名稱） |
+
+### ⚠️ 重要：動態 Key 設計原則
+
+> **帶分頁/篩選參數的查詢，Key 必須動態包含這些參數！**
+
+❌ **錯誤示範**：
+```
+Key: "category:active:list"（固定不變）
+Page 1 (page=0, size=10) → MISS → 載入第1頁 → 快取
+Page 2 (page=1, size=10) → HIT  → 回傳第1頁的錯誤資料！❌
+```
+
+✅ **正確做法**：
+```
+Key: "category:active:list:p0:s10:createdAt_desc"（動態變化）
+Page 1 → Key: "category:active:list:p0:s10:..." → MISS → 載入 → 快取
+Page 2 → Key: "category:active:list:p1:s10:..." → MISS → 載入 → 快取
+```
+
+**失效策略**：
+- 使用 `evictByPattern("category:active:list:*")` 刪除所有分頁的快取
 
 ### 2.2 快取 Key 命名規範
 
@@ -91,18 +112,18 @@
 
 | 項目 | 內容 |
 |------|------|
-| **快取 Key** | `category:active:list` |
+| **快取 Key** | `category:active:list:p{頁}:s{筆數}:{排序}`（動態） |
 | **快取資料** | `Page<CategorySummaryResponse>` |
 | **TTL** | 30 分鐘（1800 秒） |
-| **失效時機** | 建立、更新、刪除 Category 時 |
+| **失效時機** | 建立、更新、刪除 Category 時（使用 Pattern 失效） |
 
 | 方法 | 修改內容 |
 |------|----------|
-| `getActiveCategories()` | 先查快取，無則查 DB 並寫入快取 |
-| `createCategory()` | 建立後 evict `category:active:list` |
-| `updateCategory()` | 更新後 evict `category:active:list` |
-| `deactivateCategory()` | 停用後 evict `category:active:list` |
-| `activateCategory()` | 啟用後 evict `category:active:list` |
+| `getActiveCategories()` | 先查快取（動態 Key），無則查 DB 並寫入快取 |
+| `createCategory()` | 建立後 evictByPattern(`category:active:list:*`) |
+| `updateCategory()` | 更新後 evictByPattern(`category:active:list:*`) |
+| `deactivateCategory()` | 停用後 evictByPattern(`category:active:list:*`) |
+| `activateCategory()` | 啟用後 evictByPattern(`category:active:list:*`) |
 
 ### 3.3 Ticket Detail 快取
 

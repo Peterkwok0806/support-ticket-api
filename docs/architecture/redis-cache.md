@@ -11,7 +11,27 @@
 | **Consistent** | 寫入時主動失效快取，保持最終一致性 |
 | **Observable** | 記錄快取命中/未命中日誌，便於監控 |
 
-### 1.2 架構位置
+### 1.2 ⚠️ 動態 Key 設計原則
+
+> **帶分頁/篩選參數的查詢，Key 必須動態包含這些參數！**
+
+❌ **錯誤示範**（固定 Key）：
+```
+cacheService.get("category:active:list", ...)  // ❌ 固定 Key
+page=0 → 載入第1頁 → 快取
+page=1 → 命中快取 → 回傳第1頁的錯誤資料！
+```
+
+✅ **正確做法**（動態 Key）：
+```
+cacheService.get(CacheKeys.activeCategories(pageable), ...)  // ✅ 動態 Key
+Key: "category:active:list:p0:s20:createdAt_desc"
+Key: "category:active:list:p1:s20:createdAt_desc"
+```
+
+**失效時使用 Pattern**：`evictByPattern("category:active:list:*")`
+
+### 1.3 架構位置
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

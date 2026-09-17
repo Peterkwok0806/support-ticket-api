@@ -2,12 +2,16 @@ package com.pk.support_ticket_api.categories.service;
 
 import com.pk.support_ticket_api.categories.domain.Category;
 import com.pk.support_ticket_api.categories.dto.CategoryResponse;
+import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.dto.CreateCategoryRequest;
 import com.pk.support_ticket_api.categories.dto.UpdateCategoryRequest;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
+import com.pk.support_ticket_api.common.cache.CacheKeys;
+import com.pk.support_ticket_api.common.cache.CacheService;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ConflictException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
+import com.pk.support_ticket_api.common.response.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,14 +19,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +43,9 @@ class CategoryServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private CacheService cacheService;
 
     @InjectMocks
     private CategoryServiceImpl categoryService;
@@ -72,6 +80,7 @@ class CategoryServiceTest {
             assertEquals("新分類", response.name());
             verify(categoryRepository).existsByName("新分類");
             verify(categoryRepository).save(any(Category.class));
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
 
         @Test
@@ -86,6 +95,7 @@ class CategoryServiceTest {
 
             assertTrue(exception.getMessage().contains("already exists"));
             verify(categoryRepository, never()).save(any());
+            verify(cacheService, never()).evictByPattern(any());
         }
     }
 
@@ -107,6 +117,7 @@ class CategoryServiceTest {
             assertEquals("更新分類", testCategory.getName());
             assertEquals("更新描述", testCategory.getDescription());
             verify(categoryRepository).save(testCategory);
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
 
         @Test
@@ -123,6 +134,7 @@ class CategoryServiceTest {
             assertNotNull(response);
             assertEquals("新名稱", testCategory.getName());
             verify(categoryRepository, never()).existsByNameAndIdNot(eq("技術問題"), any());
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
 
         @Test
@@ -138,6 +150,7 @@ class CategoryServiceTest {
 
             assertTrue(exception.getMessage().contains("already exists"));
             verify(categoryRepository, never()).save(any());
+            verify(cacheService, never()).evictByPattern(any());
         }
 
         @Test
@@ -154,6 +167,7 @@ class CategoryServiceTest {
             assertNotNull(response);
             verify(categoryRepository).existsByNameAndIdNot("技術問題", testId);
             verify(categoryRepository).save(testCategory);
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
     }
 
@@ -170,6 +184,7 @@ class CategoryServiceTest {
             assertNotNull(response);
             assertFalse(testCategory.getActive());
             verify(categoryRepository).save(testCategory);
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
 
         @Test
@@ -182,6 +197,7 @@ class CategoryServiceTest {
 
             assertTrue(exception.getMessage().contains("already deactivated"));
             verify(categoryRepository, never()).save(any());
+            verify(cacheService, never()).evictByPattern(any());
         }
 
         @Test
@@ -210,6 +226,7 @@ class CategoryServiceTest {
             assertNotNull(response);
             assertTrue(testCategory.getActive());
             verify(categoryRepository).save(testCategory);
+            verify(cacheService).evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
         }
 
         @Test
@@ -221,6 +238,7 @@ class CategoryServiceTest {
 
             assertTrue(exception.getMessage().contains("already active"));
             verify(categoryRepository, never()).save(any());
+            verify(cacheService, never()).evictByPattern(any());
         }
 
         @Test
@@ -296,14 +314,62 @@ class CategoryServiceTest {
 
         @Test
         void getActiveCategories_Success() {
-            Pageable pageable = PageRequest.of(0, 20);
+            Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
             Page<Category> page = new PageImpl<>(List.of(testCategory), pageable, 1);
+
+            // Mock cacheService.get() to call the loader directly
+            when(cacheService.get(
+                    any(String.class),
+                    any(ParameterizedTypeReference.class),
+                    any(),
+                    any()
+            )).thenAnswer(invocation -> {
+                java.util.function.Supplier<?> loader = invocation.getArgument(3);
+                return loader.get();
+            });
             when(categoryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
-            var response = categoryService.getActiveCategories(pageable);
+            PageResponse<CategorySummaryResponse> response = categoryService.getActiveCategories(pageable);
 
             assertNotNull(response);
             assertEquals(1, response.content().size());
+            // Verify that cacheService.get was called with dynamic key (contains page info)
+            verify(cacheService).get(
+                    argThat(key -> key.startsWith("category:active:list:p0:s20:")),
+                    any(ParameterizedTypeReference.class),
+                    any(),
+                    any()
+            );
+        }
+
+        @Test
+        void getActiveCategories_CacheHit() {
+            Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
+            // PageResponse 沒有 first/last 建構子，改用直接創建 Mock 對象
+            PageResponse<CategorySummaryResponse> cachedResponse = mock(PageResponse.class);
+            when(cachedResponse.content()).thenReturn(List.of(CategorySummaryResponse.from(testCategory)));
+
+            // Mock cacheService.get() to return cached value
+            when(cacheService.get(
+                    any(String.class),
+                    any(ParameterizedTypeReference.class),
+                    any(),
+                    any()
+            )).thenReturn(cachedResponse);
+
+            PageResponse<CategorySummaryResponse> response = categoryService.getActiveCategories(pageable);
+
+            assertNotNull(response);
+            assertEquals(1, response.content().size());
+            // Verify that cacheService was called with dynamic key (cache hit scenario)
+            verify(cacheService).get(
+                    argThat(key -> key.startsWith("category:active:list:p0:s20:")),
+                    any(ParameterizedTypeReference.class),
+                    any(),
+                    any()
+            );
+            // Verify that repository was never called (cache hit)
+            verify(categoryRepository, never()).findAll(any(Specification.class), any(Pageable.class));
         }
     }
 

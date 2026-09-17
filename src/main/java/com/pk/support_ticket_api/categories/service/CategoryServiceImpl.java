@@ -7,11 +7,15 @@ import com.pk.support_ticket_api.categories.dto.CategorySummaryResponse;
 import com.pk.support_ticket_api.categories.dto.CreateCategoryRequest;
 import com.pk.support_ticket_api.categories.dto.UpdateCategoryRequest;
 import com.pk.support_ticket_api.categories.repository.CategoryRepository;
+import com.pk.support_ticket_api.common.cache.CacheKeys;
+import com.pk.support_ticket_api.common.cache.CacheService;
+import com.pk.support_ticket_api.common.cache.CacheTtl;
 import com.pk.support_ticket_api.common.exception.BusinessRuleException;
 import com.pk.support_ticket_api.common.exception.ConflictException;
 import com.pk.support_ticket_api.common.exception.ResourceNotFoundException;
 import com.pk.support_ticket_api.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +29,7 @@ import java.util.UUID;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CacheService cacheService;
 
     @Override
     public CategoryResponse createCategory(CreateCategoryRequest request) {
@@ -41,6 +46,10 @@ public class CategoryServiceImpl implements CategoryService {
         category.setSlaHoursUrgent(request.slaHoursUrgent());
 
         Category saved = categoryRepository.save(category);
+
+        // 失效所有分頁的快取（使用 Pattern）
+        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
+
         return CategoryResponse.from(saved);
     }
 
@@ -73,6 +82,10 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category saved = categoryRepository.save(category);
+
+        // 失效所有分頁的快取（使用 Pattern）
+        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
+
         return CategoryResponse.from(saved);
     }
 
@@ -86,6 +99,10 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(false);
         Category saved = categoryRepository.save(category);
+
+        // 失效所有分頁的快取（使用 Pattern）
+        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
+
         return CategoryResponse.from(saved);
     }
 
@@ -99,6 +116,10 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(true);
         Category saved = categoryRepository.save(category);
+
+        // 失效所有分頁的快取（使用 Pattern）
+        cacheService.evictByPattern(CacheKeys.ACTIVE_CATEGORIES_PATTERN);
+
         return CategoryResponse.from(saved);
     }
 
@@ -130,15 +151,21 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CategorySummaryResponse> getActiveCategories(Pageable pageable) {
+        // ✅ 使用動態 Key（包含分頁參數），避免不同頁面錯誤命中同一快取
+        return cacheService.get(
+            CacheKeys.activeCategories(pageable),
+            new ParameterizedTypeReference<PageResponse<CategorySummaryResponse>>() {},
+            CacheTtl.ACTIVE_CATEGORIES,
+            () -> loadActiveCategories(pageable)
+        );
+    }
+
+    private PageResponse<CategorySummaryResponse> loadActiveCategories(Pageable pageable) {
         Page<Category> page = categoryRepository.findAll(
             CategorySpecification.withFilters(true, null),
             pageable
         );
-
-        return PageResponse.from(
-            page,
-            CategorySummaryResponse::from
-        );
+        return PageResponse.from(page, CategorySummaryResponse::from);
     }
 
     private Category findCategoryById(UUID id) {
